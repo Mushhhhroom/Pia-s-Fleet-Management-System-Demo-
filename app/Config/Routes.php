@@ -9,10 +9,28 @@ $routes->get('login', 'AuthController::login');
 $routes->post('login', 'AuthController::authenticate');
 $routes->get('logout', 'AuthController::logout');
 
-// Public RESTful APIs for IoT Telematics & Fleet Integration
+// Public RESTful APIs for IoT Telematics, Mapping System & Fleet Integration
 $routes->group('api/v1', static function ($routes) {
+    // CORS Preflight
+    $routes->options('(:any)', 'ApiController::optionsHandler');
+
+    // Fleet Asset Registry
     $routes->get('vehicles', 'ApiController::getVehicles');
     $routes->get('vehicles/(:num)', 'ApiController::getVehicle/$1');
+
+    // Core Real-Time Mapping & Telematics Endpoints
+    $routes->get('tracking', 'ApiController::getLiveTracking');
+    $routes->get('map', 'ApiController::getLiveTracking');
+    $routes->get('map/vehicles', 'ApiController::getLiveTracking');
+    $routes->get('tracking/(:num)', 'ApiController::getVehicleTracking/$1');
+    $routes->get('tracking/(:num)/trail', 'ApiController::getVehicleTrail/$1');
+    $routes->post('tracking/simulate-step', 'ApiController::simulateStep');
+
+    // Route Geometry & Road Distance Calculation API
+    $routes->match(['get', 'post'], 'route', 'ApiController::calculateRoute');
+
+    // Telemetry Ingestion & Log History
+    $routes->get('telemetry', 'ApiController::getTelemetry');
     $routes->post('telemetry', 'ApiController::ingestTelemetry');
     $routes->get('trips/active', 'ApiController::getActiveTrips');
 });
@@ -89,5 +107,5 @@ $routes->group('api/v1', static function ($routes) {
     $routes->post('driver/trips/(:num)/complete', 'Api\TripApi::complete/$1');
     $routes->post('driver/fuel', 'Api\FuelApi::log');
     $routes->post('driver/incident', 'DriverController::reportIncident');
-    $routes->post('gps/ping', 'Api\GpsApi::ping');
+    $routes->match(['get', 'post'], 'gps/ping', 'Api\GpsApi::ping');
 });

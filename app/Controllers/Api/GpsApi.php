@@ -16,23 +16,36 @@ class GpsApi extends BaseController
 {
     public function ping()
     {
+        // Safe input retrieval supporting JSON, form-data, and query params
         $json = null;
-        try {
-            $json = $this->request->getJSON(true);
-        } catch (\Throwable $e) {
-            $raw = $this->request->getBody();
-            if (!empty($raw)) {
-                $json = json_decode($raw, true);
+        $raw = $this->request->getBody();
+        if (!empty($raw)) {
+            $decoded = json_decode($raw, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                $json = $decoded;
             }
         }
         if (empty($json)) {
             $json = $this->request->getPost();
         }
+        if (empty($json)) {
+            $json = $this->request->getGet();
+        }
 
         if (empty($json['vehicle_id']) || !isset($json['latitude']) || !isset($json['longitude'])) {
-            return $this->response->setStatusCode(400)->setJSON([
+            return $this->response->setHeader('Access-Control-Allow-Origin', '*')
+                                  ->setStatusCode(400)
+                                  ->setJSON([
                 'status'  => 'error',
-                'message' => 'Missing vehicle_id, latitude, or longitude.',
+                'message' => 'Missing required telemetry fields: vehicle_id, latitude, longitude.',
+                'example' => [
+                    'vehicle_id' => 1,
+                    'latitude'   => 14.5995,
+                    'longitude'  => 120.9842,
+                    'speed_kmh'  => 65.5,
+                    'fuel_level' => 88.0,
+                    'heading'    => 180,
+                ],
             ]);
         }
 
@@ -186,7 +199,9 @@ class GpsApi extends BaseController
             'engine_status'      => $speed > 0 ? 'running' : ($ignition ? 'idling' : 'off'),
         ]);
 
-        return $this->response->setJSON([
+        return $this->response->setHeader('Access-Control-Allow-Origin', '*')
+                              ->setHeader('Access-Control-Allow-Headers', '*')
+                              ->setJSON([
             'status'            => 'success',
             'message'           => 'GPS telemetry ping processed.',
             'geofence'          => $geofenceName,

@@ -18,7 +18,7 @@ class RouteService
      */
     public function getRoute(float $originLat, float $originLng, float $destLat, float $destLng): array
     {
-        $client = \Config\Services::curlrequest(['timeout' => 3]);
+        $client = \Config\Services::curlrequest(['timeout' => 6, 'connect_timeout' => 4]);
 
         try {
             $url = $this->osrmUrl . "{$originLng},{$originLat};{$destLng},{$destLat}?overview=simplified&geometries=geojson";
@@ -36,7 +36,7 @@ class RouteService
                     ];
                 }
             }
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             // Fallback to Great-Circle curvature calculation
         }
 

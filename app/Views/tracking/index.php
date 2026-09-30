@@ -10,14 +10,22 @@
         <h1 class="page-title mb-1">Live GPS Fleet Radar</h1>
         <p class="text-muted small mb-0">Monitor active transit corridors, satellite velocity telemetry, and vehicle breadcrumbs.</p>
     </div>
-    <div class="d-flex gap-2 align-items-center">
+    <div class="d-flex gap-2 align-items-center flex-wrap">
+        <button id="btnAutoStream" class="btn-corp btn-corp-secondary" style="display: inline-flex; align-items: center; gap: 6px;">
+            <i class="fa-solid fa-tower-broadcast text-success" id="streamIcon"></i>
+            <span id="streamLabel">Live Stream: ON (5s)</span>
+        </button>
+        <button id="btnFitBounds" class="btn-corp btn-corp-secondary" style="display: inline-flex; align-items: center; gap: 6px;" title="Recenter to show all vehicles">
+            <i class="fa-solid fa-crosshairs text-muted"></i>
+            <span>Fit Fleet</span>
+        </button>
         <button id="btnSimulate" class="btn-corp btn-corp-secondary" style="display: inline-flex; align-items: center; gap: 6px;">
             <i class="fa-solid fa-satellite text-primary"></i>
             <span>Simulate Step</span>
         </button>
         <button id="btnRefresh" class="btn-corp btn-corp-primary" style="display: inline-flex; align-items: center; gap: 6px;">
             <i class="fa-solid fa-arrows-rotate"></i>
-            <span>Sync Telemetry</span>
+            <span>Sync</span>
         </button>
     </div>
 </div>
@@ -32,14 +40,14 @@
                     <span class="mono" style="font-size: 0.72rem; text-transform: uppercase; font-weight: 600; color: var(--text-muted);">
                         Transponders (<span id="vehicleCount"><?= count($vehicles) ?></span>)
                     </span>
-                    <span class="telemetry-pulse" style="padding: 2px 8px; font-size: 0.7rem;">
+                    <span id="telemetryBadge" class="telemetry-pulse" style="padding: 2px 8px; font-size: 0.7rem;">
                         <span class="pulse-dot"></span> Live
                     </span>
                 </div>
                 <!-- Vehicle Quick Search -->
                 <div class="input-group input-group-sm">
                     <span class="input-group-text bg-white border-end-0 text-muted"><i class="fa-solid fa-magnifying-glass" style="font-size: 0.75rem;"></i></span>
-                    <input type="text" id="filterSearch" class="form-control border-start-0" placeholder="Filter code or plate..." style="font-size: 0.8rem;">
+                    <input type="text" id="filterSearch" class="form-control border-start-0" placeholder="Filter code, plate, or driver..." style="font-size: 0.8rem;">
                 </div>
             </div>
             
@@ -57,10 +65,12 @@
             <div class="overflow-auto flex-grow-1" id="vehicleList" style="padding: 8px;">
                 <?php foreach ($vehicles as $v): ?>
                     <div class="vehicle-item p-2 mb-2 rounded border bg-white" 
+                         id="card-<?= $v['id'] ?>"
                          data-id="<?= $v['id'] ?>"
                          data-status="<?= $v['status'] ?>"
                          data-code="<?= esc(strtolower($v['vehicle_code'])) ?>"
                          data-plate="<?= esc(strtolower($v['plate_number'])) ?>"
+                         data-driver="<?= esc(strtolower($v['driver_name'] ?? '')) ?>"
                          data-lat="<?= $v['current_latitude'] ?>"
                          data-lng="<?= $v['current_longitude'] ?>"
                          onclick="focusVehicle(<?= $v['id'] ?>)"
@@ -71,8 +81,11 @@
                                 <?= ucfirst(str_replace('_', ' ', $v['status'])) ?>
                             </span>
                         </div>
-                        <div class="text-muted" style="font-size: 0.74rem; margin-bottom: 6px;">
+                        <div class="text-muted" style="font-size: 0.74rem; margin-bottom: 4px;">
                             <?= esc($v['make'] . ' ' . $v['model']) ?> &bull; <span class="mono"><?= esc($v['plate_number']) ?></span>
+                        </div>
+                        <div class="small text-truncate mb-2" style="font-size: 0.7rem; color: #475569;">
+                            <i class="fa-solid fa-location-dot text-danger me-1"></i> <span id="geo-<?= $v['id'] ?>"><?= esc($v['current_geofence'] ?? 'Highway Corridor') ?></span>
                         </div>
                         <div class="d-flex justify-content-between align-items-center pt-1 border-top" style="font-size: 0.72rem; color: var(--text-muted);">
                             <span><i class="fa-solid fa-gauge-high text-primary me-1"></i> <span id="speed-<?= $v['id'] ?>" class="mono fw-semibold text-dark"><?= $v['current_speed'] ?></span> km/h</span>
@@ -92,6 +105,15 @@
         <div class="card-panel" style="height: calc(100vh - 180px); overflow: hidden; position: relative;">
             <div id="telematicsMap" style="height: 100%; width: 100%;"></div>
             
+            <!-- Map Overlay: Active Vehicle Trail Panel -->
+            <div id="trailInfoPanel" style="display: none; position: absolute; top: 16px; left: 16px; z-index: 500; background: rgba(255, 255, 255, 0.96); backdrop-filter: blur(6px); padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border-subtle); box-shadow: 0 4px 12px rgba(0,0,0,0.08); font-size: 0.75rem; max-width: 320px;">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <strong class="mono" id="trailVehicleCode" style="color: var(--primary);">FLT-00</strong>
+                    <button type="button" class="btn-close" style="font-size: 0.6rem;" onclick="clearActiveTrail()"></button>
+                </div>
+                <div id="trailDetails" class="text-muted" style="font-size: 0.72rem;">Displaying GPS telemetry breadcrumbs</div>
+            </div>
+
             <!-- Map Overlay Legend -->
             <div style="position: absolute; bottom: 16px; right: 16px; z-index: 500; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(4px); padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-subtle); box-shadow: 0 2px 6px rgba(0,0,0,0.05); font-size: 0.72rem;">
                 <div class="mono text-muted mb-1 text-uppercase" style="font-size: 0.65rem; font-weight: 600;">Status Spectrum</div>
@@ -110,18 +132,36 @@
 <?= $this->section('scripts') ?>
 <script>
     let vehicles = <?= json_encode($vehicles) ?>;
+    let initialLoad = true;
+    let selectedVehicleId = null;
+    let isStreamActive = true;
+    let streamTimer = null;
+
+    // Initialize Leaflet Map
     const map = L.map('telematicsMap', {
         zoomControl: true,
         attributionControl: false
     }).setView([14.5995, 120.9842], 11);
 
-    // CartoDB Voyager Light Tiles for high-clarity minimalist mapping
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-        maxZoom: 19
+    // High-clarity Voyager tiles + OpenStreetMap fallback layer
+    const cartoLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19,
+        subdomains: 'abcd'
     }).addTo(map);
+
+    const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19
+    });
+
+    L.control.layers({
+        'CartoDB Minimal': cartoLayer,
+        'OpenStreetMap': osmLayer
+    }, null, { position: 'topright' }).addTo(map);
 
     let markers = {};
     const markerGroup = L.featureGroup().addTo(map);
+    const trailGroup = L.featureGroup().addTo(map);
+    const corridorGroup = L.featureGroup().addTo(map);
 
     function getPinColor(status) {
         switch(status) {
@@ -141,13 +181,14 @@
             if (!v.current_latitude || !v.current_longitude) return;
 
             const color = getPinColor(v.status);
+            const isSelected = selectedVehicleId == v.id;
             const icon = L.divIcon({
                 className: 'custom-fleet-pin',
-                html: `<div style="background-color: ${color}; color: #ffffff; border-radius: 8px; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.2); border: 2px solid #ffffff; cursor: pointer; transition: transform 0.15s ease;">
-                        <i class="fa-solid fa-truck" style="font-size: 13px;"></i>
+                html: `<div style="background-color: ${color}; color: #ffffff; border-radius: 8px; width: ${isSelected ? 40 : 34}px; height: ${isSelected ? 40 : 34}px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.25); border: ${isSelected ? '3px solid #facc15' : '2px solid #ffffff'}; cursor: pointer; transition: all 0.15s ease;">
+                        <i class="fa-solid fa-truck" style="font-size: ${isSelected ? 16 : 13}px;"></i>
                        </div>`,
-                iconSize: [34, 34],
-                iconAnchor: [17, 17]
+                iconSize: [isSelected ? 40 : 34, isSelected ? 40 : 34],
+                iconAnchor: [isSelected ? 20 : 17, isSelected ? 20 : 17]
             });
 
             const marker = L.marker([parseFloat(v.current_latitude), parseFloat(v.current_longitude)], { icon: icon });
@@ -158,38 +199,147 @@
                         <strong class="mono" style="font-size: 0.88rem; color: #0f172a;">${v.vehicle_code}</strong>
                         <span class="status-badge status-${v.status}" style="font-size: 0.65rem;">${v.status.replace('_', ' ')}</span>
                     </div>
-                    <div style="font-size: 0.76rem; color: #64748b; margin-bottom: 8px;">${v.make} ${v.model} &bull; <span class="mono">${v.plate_number}</span></div>
+                    <div style="font-size: 0.76rem; color: #64748b; margin-bottom: 6px;">${v.make} ${v.model} &bull; <span class="mono">${v.plate_number}</span></div>
                     
                     <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px 10px; margin-bottom: 8px; font-size: 0.75rem;">
                         <div class="d-flex justify-content-between mb-1"><span>Speed:</span> <strong class="mono">${v.current_speed} km/h</strong></div>
                         <div class="d-flex justify-content-between mb-1"><span>Fuel Level:</span> <strong class="mono">${v.current_fuel_level}%</strong></div>
+                        <div class="d-flex justify-content-between mb-1"><span>Geofence:</span> <strong class="text-truncate" style="max-width: 130px;">${v.current_geofence || 'Corridor'}</strong></div>
                         <div class="d-flex justify-content-between mb-1"><span>Driver:</span> <strong>${v.driver_name || 'Unassigned'}</strong></div>
                         ${v.trip_number ? `<div class="pt-1 mt-1 border-top"><div class="d-flex justify-content-between"><span>Trip:</span> <strong class="mono text-primary">${v.trip_number}</strong></div><div class="d-flex justify-content-between"><span>Cargo:</span> <strong>${v.cargo_type || 'General'}</strong></div></div>` : ''}
                     </div>
 
-                    <a href="<?= base_url('vehicles/') ?>/${v.id}" class="btn-corp btn-corp-secondary w-100 text-center text-decoration-none d-block" style="font-size: 0.75rem; padding: 5px 8px;">
-                        Vehicle Ledger &rarr;
-                    </a>
+                    <div class="d-flex gap-2">
+                        <button onclick="loadVehicleTrail(${v.id})" class="btn-corp btn-corp-primary flex-grow-1 text-center" style="font-size: 0.72rem; padding: 4px 6px;">
+                            <i class="fa-solid fa-route me-1"></i> Trail
+                        </button>
+                        <a href="<?= base_url('vehicles/') ?>/${v.id}" class="btn-corp btn-corp-secondary flex-grow-1 text-center text-decoration-none" style="font-size: 0.72rem; padding: 4px 6px;">
+                            Ledger &rarr;
+                        </a>
+                    </div>
                 </div>
             `;
             marker.bindPopup(popup);
+            marker.on('click', () => focusVehicle(v.id, false));
             markerGroup.addLayer(marker);
             markers[v.id] = marker;
         });
 
-        if (markerGroup.getLayers().length > 0) {
+        // Fit map bounds only on initial page load
+        if (initialLoad && markerGroup.getLayers().length > 0) {
             map.fitBounds(markerGroup.getBounds().pad(0.12));
+            initialLoad = false;
         }
     }
 
     renderMarkers();
 
-    function focusVehicle(id) {
+    // Focus vehicle from sidebar or marker click
+    function focusVehicle(id, pan = true) {
+        selectedVehicleId = id;
         const v = vehicles.find(item => item.id == id);
-        if (v && markers[id]) {
-            map.setView([parseFloat(v.current_latitude), parseFloat(v.current_longitude)], 14, { animate: true });
-            markers[id].openPopup();
+        
+        // Highlight active transponder card in sidebar
+        document.querySelectorAll('.vehicle-item').forEach(card => card.classList.remove('border-primary', 'shadow-sm'));
+        const activeCard = document.getElementById(`card-${id}`);
+        if (activeCard) {
+            activeCard.classList.add('border-primary', 'shadow-sm');
+            activeCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
+
+        if (v && markers[id]) {
+            if (pan) {
+                map.setView([parseFloat(v.current_latitude), parseFloat(v.current_longitude)], 14, { animate: true });
+            }
+            markers[id].openPopup();
+            loadVehicleTrail(id);
+        }
+    }
+
+    // Load & Render GPS Breadcrumb Trail from REST API
+    async function loadVehicleTrail(vehicleId) {
+        const v = vehicles.find(item => item.id == vehicleId);
+        if (!v) return;
+
+        try {
+            trailGroup.clearLayers();
+            corridorGroup.clearLayers();
+
+            const res = await fetch(`<?= base_url('api/v1/tracking/') ?>/${vehicleId}/trail?limit=50`);
+            const data = await res.json();
+
+            if (data.status === 'success' && data.coordinates && data.coordinates.length > 1) {
+                // Draw polyline of movement history
+                const polyline = L.polyline(data.coordinates, {
+                    color: '#2563eb',
+                    weight: 4,
+                    opacity: 0.85,
+                    lineJoin: 'round'
+                }).addTo(trailGroup);
+
+                // Add small breadcrumb dots along the trail
+                data.coordinates.forEach((coord, idx) => {
+                    if (idx % 2 === 0) { // every alternate point to keep clean
+                        L.circleMarker(coord, {
+                            radius: 3,
+                            fillColor: '#3b82f6',
+                            color: '#ffffff',
+                            weight: 1,
+                            fillOpacity: 0.9
+                        }).addTo(trailGroup);
+                    }
+                });
+
+                // Show Trail Info Panel
+                const panel = document.getElementById('trailInfoPanel');
+                document.getElementById('trailVehicleCode').innerText = `${v.vehicle_code} (${v.plate_number})`;
+                document.getElementById('trailDetails').innerText = `${data.point_count} GPS telematics breadcrumbs recorded`;
+                panel.style.display = 'block';
+            }
+
+            // If vehicle has active trip, draw scheduled route corridor
+            if (v.origin_lat && v.origin_lng && v.destination_lat && v.destination_lng) {
+                const origin = [parseFloat(v.origin_lat), parseFloat(v.origin_lng)];
+                const dest   = [parseFloat(v.destination_lat), parseFloat(v.destination_lng)];
+                const current= [parseFloat(v.current_latitude), parseFloat(v.current_longitude)];
+
+                // Origin (Green marker)
+                L.circleMarker(origin, {
+                    radius: 7,
+                    fillColor: '#10b981',
+                    color: '#ffffff',
+                    weight: 2,
+                    fillOpacity: 1
+                }).addTo(corridorGroup).bindPopup(`<b>Origin Hub:</b> ${v.origin_address || 'Dispatch'}`);
+
+                // Destination (Red marker)
+                L.circleMarker(dest, {
+                    radius: 7,
+                    fillColor: '#ef4444',
+                    color: '#ffffff',
+                    weight: 2,
+                    fillOpacity: 1
+                }).addTo(corridorGroup).bindPopup(`<b>Delivery Site:</b> ${v.destination_address || 'Terminal'}`);
+
+                // Dashed corridor
+                L.polyline([origin, current, dest], {
+                    color: '#10b981',
+                    weight: 2.5,
+                    dashArray: '5, 8',
+                    opacity: 0.7
+                }).addTo(corridorGroup);
+            }
+        } catch (err) {
+            console.warn('Could not load vehicle trail:', err);
+        }
+    }
+
+    function clearActiveTrail() {
+        trailGroup.clearLayers();
+        corridorGroup.clearLayers();
+        document.getElementById('trailInfoPanel').style.display = 'none';
+        selectedVehicleId = null;
+        document.querySelectorAll('.vehicle-item').forEach(card => card.classList.remove('border-primary', 'shadow-sm'));
     }
 
     // Filter by Status & Text Search
@@ -201,7 +351,8 @@
             const statusMatch = (activeFilter === 'all' || item.getAttribute('data-status') === activeFilter);
             const textMatch = !searchTerm || 
                               item.getAttribute('data-code').includes(searchTerm) || 
-                              item.getAttribute('data-plate').includes(searchTerm);
+                              item.getAttribute('data-plate').includes(searchTerm) ||
+                              item.getAttribute('data-driver').includes(searchTerm);
 
             if (statusMatch && textMatch) {
                 item.style.display = 'block';
@@ -221,27 +372,73 @@
 
     document.getElementById('filterSearch').addEventListener('input', applyFilters);
 
-    // Refresh Live Telematics Data
-    async function refreshData() {
+    // Refresh Live Telematics Data from API
+    async function refreshData(silent = false) {
         try {
-            const res = await fetch('<?= base_url('tracking/live-data') ?>');
+            const res = await fetch('<?= base_url('api/v1/tracking') ?>');
             const data = await res.json();
             if (data.status === 'success') {
                 vehicles = data.vehicles;
                 renderMarkers();
+                
+                // Update vehicle cards
                 vehicles.forEach(v => {
                     const speedEl = document.getElementById(`speed-${v.id}`);
-                    const fuelEl = document.getElementById(`fuel-${v.id}`);
+                    const fuelEl  = document.getElementById(`fuel-${v.id}`);
+                    const geoEl   = document.getElementById(`geo-${v.id}`);
                     if (speedEl) speedEl.innerText = v.current_speed;
                     if (fuelEl) fuelEl.innerText = v.current_fuel_level;
+                    if (geoEl && v.current_geofence) geoEl.innerText = v.current_geofence;
                 });
+
+                // If a vehicle is currently selected, refresh its trail
+                if (selectedVehicleId) {
+                    loadVehicleTrail(selectedVehicleId);
+                }
             }
         } catch(e) {
-            console.error('Failed to sync telemetry:', e);
+            if (!silent) console.error('Failed to sync telemetry:', e);
         }
     }
 
-    document.getElementById('btnRefresh').addEventListener('click', refreshData);
+    document.getElementById('btnRefresh').addEventListener('click', () => refreshData(false));
+
+    // Fit Fleet Button
+    document.getElementById('btnFitBounds').addEventListener('click', function() {
+        if (markerGroup.getLayers().length > 0) {
+            map.fitBounds(markerGroup.getBounds().pad(0.12));
+        }
+    });
+
+    // Auto-stream Telemetry Toggle
+    const btnAutoStream = document.getElementById('btnAutoStream');
+    const streamIcon    = document.getElementById('streamIcon');
+    const streamLabel   = document.getElementById('streamLabel');
+
+    function toggleAutoStream() {
+        isStreamActive = !isStreamActive;
+        if (isStreamActive) {
+            streamIcon.className = 'fa-solid fa-tower-broadcast text-success';
+            streamLabel.innerText = 'Live Stream: ON (5s)';
+            startStreamTimer();
+        } else {
+            streamIcon.className = 'fa-solid fa-tower-broadcast text-muted';
+            streamLabel.innerText = 'Live Stream: PAUSED';
+            clearInterval(streamTimer);
+        }
+    }
+
+    function startStreamTimer() {
+        clearInterval(streamTimer);
+        streamTimer = setInterval(() => {
+            if (isStreamActive) {
+                refreshData(true);
+            }
+        }, 5000);
+    }
+
+    btnAutoStream.addEventListener('click', toggleAutoStream);
+    startStreamTimer();
 
     // Simulate Step
     document.getElementById('btnSimulate').addEventListener('click', async function() {
@@ -251,14 +448,14 @@
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Computing...</span>';
 
         try {
-            const res = await fetch('<?= base_url('tracking/simulate-step') ?>', {
+            const res = await fetch('<?= base_url('api/v1/tracking/simulate-step') ?>', {
                 method: 'POST',
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest'
                 }
             });
             const result = await res.json();
-            await refreshData();
+            await refreshData(false);
         } catch (e) {
             console.error(e);
         } finally {

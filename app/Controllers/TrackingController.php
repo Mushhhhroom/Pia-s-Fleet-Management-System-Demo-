@@ -14,10 +14,20 @@ class TrackingController extends BaseController
         $vehicles = $vehicleModel->select('vehicles.*, 
                                           CONCAT(drivers.first_name, " ", drivers.last_name) AS driver_name, 
                                           drivers.phone AS driver_phone,
-                                          trips.trip_number, trips.origin_address, trips.destination_address, trips.cargo_type')
+                                          trips.trip_number, trips.origin_address, trips.destination_address, 
+                                          trips.origin_lat, trips.origin_lng, trips.destination_lat, trips.destination_lng,
+                                          trips.cargo_type')
                                 ->join('drivers', 'drivers.id = vehicles.current_driver_id', 'left')
                                 ->join('trips', 'trips.vehicle_id = vehicles.id AND trips.status IN ("in_transit", "dispatched")', 'left')
                                 ->findAll();
+
+        $geofenceChecker = new \App\Libraries\GeofenceChecker();
+        foreach ($vehicles as &$v) {
+            $lat = (float)($v['current_latitude'] ?? 0);
+            $lng = (float)($v['current_longitude'] ?? 0);
+            $fence = ($lat != 0 && $lng != 0) ? $geofenceChecker->check($lat, $lng) : null;
+            $v['current_geofence'] = $fence ? $fence['name'] : 'Open Corridor';
+        }
 
         return view('tracking/index', [
             'title'    => 'Real-Time Fleet Telematics & GPS Tracking',
@@ -31,12 +41,22 @@ class TrackingController extends BaseController
         $vehicles = $vehicleModel->select('vehicles.*, 
                                           CONCAT(drivers.first_name, " ", drivers.last_name) AS driver_name, 
                                           drivers.phone AS driver_phone,
-                                          trips.trip_number, trips.origin_address, trips.destination_address, trips.cargo_type')
+                                          trips.trip_number, trips.origin_address, trips.destination_address, 
+                                          trips.origin_lat, trips.origin_lng, trips.destination_lat, trips.destination_lng,
+                                          trips.cargo_type')
                                 ->join('drivers', 'drivers.id = vehicles.current_driver_id', 'left')
                                 ->join('trips', 'trips.vehicle_id = vehicles.id AND trips.status IN ("in_transit", "dispatched")', 'left')
                                 ->findAll();
 
-        return $this->response->setJSON([
+        $geofenceChecker = new \App\Libraries\GeofenceChecker();
+        foreach ($vehicles as &$v) {
+            $lat = (float)($v['current_latitude'] ?? 0);
+            $lng = (float)($v['current_longitude'] ?? 0);
+            $fence = ($lat != 0 && $lng != 0) ? $geofenceChecker->check($lat, $lng) : null;
+            $v['current_geofence'] = $fence ? $fence['name'] : 'Open Corridor';
+        }
+
+        return $this->response->setHeader('Access-Control-Allow-Origin', '*')->setJSON([
             'status'    => 'success',
             'timestamp' => date('Y-m-d H:i:s'),
             'vehicles'  => $vehicles,
