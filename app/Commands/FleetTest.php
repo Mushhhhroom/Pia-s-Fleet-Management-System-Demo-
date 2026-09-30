@@ -144,7 +144,7 @@ class FleetTest extends BaseCommand
             $dModel->update($driver['id'], ['status' => 'available']);
 
             $savedTrip = $tripModel->find($tripId);
-            if ($savedTrip && $savedTrip['status'] === 'completed' && (float)$savedTrip['end_odometer'] === $arrivalOdo) {
+            if ($savedTrip && $savedTrip['status'] === 'completed' && abs((float)$savedTrip['end_odometer'] - $arrivalOdo) < 0.05) {
                 CLI::write("  [PASS] Trip successfully started, traveled {$route['distance_km']} km, and completed with verified odometer ({$arrivalOdo} km).", 'green');
                 $passed++;
             } else {

@@ -3,299 +3,635 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= esc($title ?? 'Fleet Management System') ?> | FleetPulse</title>
-    <!-- Bootstrap 5 CSS -->
+    <title><?= esc($title ?? 'FleetPulse FMS') ?> &mdash; Enterprise Logistics</title>
+
+    <!-- Google Fonts: Inter & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <!-- Bootstrap 5 & FontAwesome 6 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- FontAwesome 6 Icons -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
     <style>
         :root {
-            --sidebar-width: 260px;
-            --primary-color: #2563eb;
-            --sidebar-bg: #0f172a;
-            --sidebar-hover: #1e293b;
-            --sidebar-active: #3b82f6;
-            --body-bg: #f8fafc;
-            --card-border: #e2e8f0;
+            --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+            
+            --sidebar-w: 250px;
+            --bg-canvas: #f8fafc;
+            --bg-surface: #ffffff;
+            --border-subtle: #e2e8f0;
+            --border-strong: #cbd5e1;
+            
+            --text-heading: #0f172a;
+            --text-body: #334155;
+            --text-muted: #64748b;
+            
+            --primary: #1e3a8a;
+            --primary-accent: #2563eb;
+            --sidebar-bg: #0b1324;
+            --sidebar-item-hover: rgba(255, 255, 255, 0.05);
+            --sidebar-item-active: rgba(37, 99, 235, 0.15);
         }
 
         body {
-            background-color: var(--body-bg);
-            font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            color: #334155;
-            min-height: 100vh;
+            font-family: var(--font-sans);
+            background-color: var(--bg-canvas);
+            color: var(--text-body);
+            -webkit-font-smoothing: antialiased;
+            letter-spacing: -0.011em;
+            margin: 0;
+            padding: 0;
         }
 
-        /* Sidebar Styling */
+        /* Monospace accents for IDs, plates, numbers */
+        .mono {
+            font-family: var(--font-mono);
+            letter-spacing: -0.03em;
+        }
+
+        /* -------------------------------------------------------------
+           Corporate Minimalist Sidebar
+        ------------------------------------------------------------- */
         #sidebar {
-            width: var(--sidebar-width);
+            width: var(--sidebar-w);
             background: var(--sidebar-bg);
             min-height: 100vh;
             position: fixed;
             top: 0;
             left: 0;
-            z-index: 1000;
-            transition: all 0.3s ease;
-            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
+            z-index: 1040;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid rgba(255, 255, 255, 0.06);
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-        #sidebar .brand {
-            padding: 22px 24px;
-            font-size: 1.25rem;
+        .sidebar-brand {
+            padding: 24px 20px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .brand-logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+            color: #ffffff;
+        }
+
+        .brand-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            border-radius: 8px;
+            display: grid;
+            place-items: center;
+            color: #ffffff;
+            font-size: 0.95rem;
+        }
+
+        .brand-title {
+            font-size: 1.05rem;
             font-weight: 700;
-            color: #fff;
-            letter-spacing: -0.5px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-            display: flex;
-            align-items: center;
-            gap: 12px;
+            letter-spacing: -0.02em;
+            color: #ffffff;
+            line-height: 1.2;
         }
 
-        #sidebar .nav-link {
+        .brand-badge {
+            font-size: 0.65rem;
+            font-family: var(--font-mono);
             color: #94a3b8;
-            padding: 12px 24px;
-            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            display: block;
+        }
+
+        /* User Role Pill inside Sidebar */
+        .sidebar-user-role {
+            margin: 14px 16px 8px;
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            border-radius: 8px;
             display: flex;
             align-items: center;
-            gap: 14px;
-            border-left: 3px solid transparent;
-            transition: all 0.2s ease;
+            justify-content: space-between;
         }
 
-        #sidebar .nav-link:hover {
-            color: #f8fafc;
-            background: var(--sidebar-hover);
+        .sidebar-user-role .role-label {
+            font-size: 0.68rem;
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            color: #94a3b8;
         }
 
-        #sidebar .nav-link.active {
-            color: #fff;
-            background: rgba(59, 130, 246, 0.15);
-            border-left-color: var(--sidebar-active);
+        .sidebar-user-role .role-pill {
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 999px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        /* Nav links */
+        .sidebar-nav {
+            padding: 12px 10px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .nav-section-title {
+            font-size: 0.65rem;
+            font-family: var(--font-mono);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #64748b;
+            padding: 16px 12px 6px;
             font-weight: 600;
         }
 
-        #sidebar .nav-category {
-            font-size: 0.72rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: #64748b;
-            padding: 20px 24px 6px;
-            font-weight: 700;
+        .sidebar-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 9px 12px;
+            color: #94a3b8;
+            font-size: 0.85rem;
+            font-weight: 500;
+            text-decoration: none;
+            border-radius: 7px;
+            transition: all 0.15s ease;
+            margin-bottom: 2px;
         }
 
-        /* Main Content Container */
+        .sidebar-link i {
+            font-size: 0.95rem;
+            width: 18px;
+            text-align: center;
+            color: #64748b;
+            transition: color 0.15s ease;
+        }
+
+        .sidebar-link:hover {
+            color: #f8fafc;
+            background: var(--sidebar-item-hover);
+        }
+
+        .sidebar-link:hover i {
+            color: #38bdf8;
+        }
+
+        .sidebar-link.active {
+            color: #ffffff;
+            background: var(--sidebar-item-active);
+            font-weight: 600;
+        }
+
+        .sidebar-link.active i {
+            color: #38bdf8;
+        }
+
+        .sidebar-footer {
+            padding: 14px 16px;
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: #64748b;
+        }
+
+        /* -------------------------------------------------------------
+           Main Content Canvas & Top Header
+        ------------------------------------------------------------- */
         #main-wrapper {
-            margin-left: var(--sidebar-width);
+            margin-left: var(--sidebar-w);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
         }
 
-        /* Top Header */
-        .top-navbar {
-            background: #fff;
-            height: 64px;
-            border-bottom: 1px solid var(--card-border);
-            padding: 0 28px;
+        .top-header {
+            height: 60px;
+            background: #ffffff;
+            border-bottom: 1px solid var(--border-subtle);
+            padding: 0 32px;
             display: flex;
             align-items: center;
             justify-content: space-between;
             position: sticky;
             top: 0;
-            z-index: 990;
+            z-index: 900;
         }
 
-        .content-area {
-            padding: 28px;
+        .telemetry-pulse {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.78rem;
+            font-weight: 500;
+            color: #059669;
+            background: #ecfdf5;
+            padding: 4px 10px;
+            border-radius: 999px;
+            border: 1px solid #a7f3d0;
+        }
+
+        .pulse-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #10b981;
+            box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+            animation: pulse-ring 2s infinite;
+        }
+
+        @keyframes pulse-ring {
+            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+            70% { box-shadow: 0 0 0 5px rgba(16, 185, 129, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        .content-canvas {
+            padding: 28px 32px 48px;
             flex: 1;
         }
 
-        /* Metric Cards */
-        .kpi-card {
-            border: 1px solid var(--card-border);
-            border-radius: 12px;
-            background: #fff;
-            padding: 20px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-        .kpi-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.06);
+        /* -------------------------------------------------------------
+           Corporate Minimalism Components
+        ------------------------------------------------------------- */
+        /* Clean Flat Cards */
+        .card-panel {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: 10px;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+            overflow: hidden;
+            margin-bottom: 24px;
         }
 
-        .kpi-icon {
-            width: 48px;
-            height: 48px;
-            border-radius: 10px;
+        .card-panel-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-subtle);
+            background: #ffffff;
             display: flex;
             align-items: center;
-            justify-content: center;
-            font-size: 1.25rem;
+            justify-content: space-between;
         }
 
-        .badge-status {
-            padding: 5px 10px;
-            border-radius: 20px;
+        .card-panel-header h5,
+        .card-panel-header h6 {
+            margin: 0;
             font-weight: 600;
-            font-size: 0.78rem;
-            text-transform: capitalize;
+            font-size: 0.95rem;
+            color: var(--text-heading);
+            letter-spacing: -0.01em;
         }
-        .badge-active { background: #dcfce7; color: #15803d; }
-        .badge-in_transit { background: #dbeafe; color: #1d4ed8; }
-        .badge-maintenance { background: #fef3c7; color: #b45309; }
-        .badge-out_of_service { background: #fee2e2; color: #b91c1c; }
-        .badge-available { background: #dcfce7; color: #15803d; }
-        .badge-on_trip { background: #dbeafe; color: #1d4ed8; }
-        .badge-scheduled { background: #f1f5f9; color: #475569; }
-        .badge-dispatched { background: #e0e7ff; color: #4338ca; }
-        .badge-completed { background: #dcfce7; color: #15803d; }
-        .badge-cancelled { background: #fee2e2; color: #b91c1c; }
 
-        /* Card custom styling */
-        .card-custom {
-            border: 1px solid var(--card-border);
-            border-radius: 12px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-            background: #fff;
-            overflow: hidden;
+        .card-panel-body {
+            padding: 20px;
         }
-        .card-custom .card-header {
-            background: #fff;
-            border-bottom: 1px solid var(--card-border);
-            padding: 16px 20px;
+
+        /* KPI Metric Blocks */
+        .kpi-tile {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: 10px;
+            padding: 18px 20px;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.02);
+            transition: border-color 0.2s ease, transform 0.2s ease;
+            position: relative;
+        }
+
+        .kpi-tile:hover {
+            border-color: var(--border-strong);
+            transform: translateY(-1px);
+        }
+
+        .kpi-tile .kpi-label {
+            font-size: 0.72rem;
             font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-muted);
+            margin-bottom: 6px;
         }
 
-        /* Leaflet custom map */
-        .leaflet-container {
-            border-radius: 8px;
-            font-family: inherit;
+        .kpi-tile .kpi-value {
+            font-size: 1.65rem;
+            font-weight: 700;
+            color: var(--text-heading);
+            letter-spacing: -0.03em;
+            line-height: 1.1;
+        }
+
+        .kpi-tile .kpi-sub {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 6px;
+        }
+
+        /* Minimalist Status Badges */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+        }
+
+        .status-active, .status-available, .status-completed {
+            background: #f0fdf4;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+        }
+
+        .status-in_transit, .status-on_trip, .status-dispatched {
+            background: #eff6ff;
+            color: #1e40af;
+            border: 1px solid #bfdbfe;
+        }
+
+        .status-maintenance {
+            background: #fffbeb;
+            color: #92400e;
+            border: 1px solid #fde68a;
+        }
+
+        .status-scheduled {
+            background: #f8fafc;
+            color: #475569;
+            border: 1px solid #e2e8f0;
+        }
+
+        .status-out_of_service, .status-cancelled {
+            background: #fef2f2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+
+        /* Minimalist Table */
+        .table-minimal {
+            width: 100%;
+            margin: 0;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        .table-minimal thead th {
+            background: #f8fafc;
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            padding: 12px 18px;
+            border-bottom: 1px solid var(--border-subtle);
+            border-top: none;
+        }
+
+        .table-minimal tbody td {
+            padding: 14px 18px;
+            vertical-align: middle;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 0.86rem;
+            color: var(--text-body);
+        }
+
+        .table-minimal tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .table-minimal tbody tr:hover td {
+            background-color: #f8fafc;
+        }
+
+        /* Clean action buttons */
+        .btn-corp {
+            font-size: 0.82rem;
+            font-weight: 600;
+            letter-spacing: -0.01em;
+            padding: 7px 14px;
+            border-radius: 7px;
+            transition: all 0.15s ease;
+        }
+
+        .btn-corp-primary {
+            background: var(--text-heading);
+            color: #ffffff;
+            border: 1px solid var(--text-heading);
+        }
+
+        .btn-corp-primary:hover {
+            background: #1e293b;
+            color: #ffffff;
+        }
+
+        .btn-corp-secondary {
+            background: #ffffff;
+            color: var(--text-body);
+            border: 1px solid var(--border-subtle);
+        }
+
+        .btn-corp-secondary:hover {
+            background: #f8fafc;
+            border-color: var(--border-strong);
+            color: var(--text-heading);
         }
     </style>
-    <!-- Leaflet JS -->
+    <!-- Leaflet JS & Chart.js -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
+    <?php 
+        $userRole = session()->get('user_role') ?? 'dispatcher';
+        $userName = session()->get('user_name') ?? 'System User';
+        $userEmail = session()->get('user_email') ?? 'user@fleet.com';
+
+        // Role aesthetic configurations
+        $roleBadges = [
+            'admin'       => ['label' => 'Administrator', 'color' => '#3b82f6', 'bg' => 'rgba(59, 130, 246, 0.15)'],
+            'dispatcher'  => ['label' => 'Dispatch Lead', 'color' => '#10b981', 'bg' => 'rgba(16, 185, 129, 0.15)'],
+            'maintenance' => ['label' => 'Technical Shop', 'color' => '#f59e0b', 'bg' => 'rgba(245, 158, 11, 0.15)'],
+            'driver'      => ['label' => 'Driver Operator', 'color' => '#06b6d4', 'bg' => 'rgba(6, 182, 212, 0.15)'],
+        ];
+        $currentBadge = $roleBadges[$userRole] ?? $roleBadges['dispatcher'];
+    ?>
+
     <!-- Sidebar Navigation -->
     <aside id="sidebar">
-        <div class="brand">
-            <i class="fa-solid fa-truck-fast text-primary"></i>
-            <span>Fleet<span class="text-primary">Pulse</span> FMS</span>
+        <!-- Brand Header -->
+        <div class="sidebar-brand">
+            <a href="<?= base_url('/') ?>" class="brand-logo">
+                <div class="brand-icon">
+                    <i class="fa-solid fa-shapes"></i>
+                </div>
+                <div>
+                    <div class="brand-title">Fleet<span class="text-primary-accent" style="color: #38bdf8;">Pulse</span></div>
+                    <span class="brand-badge">Enterprise Logistics</span>
+                </div>
+            </a>
         </div>
 
-        <nav class="mt-2">
-            <div class="nav-category">Main Monitoring</div>
-            <a href="<?= base_url('/') ?>" class="nav-link <?= uri_string() === '' || uri_string() === 'dashboard' ? 'active' : '' ?>">
-                <i class="fa-solid fa-gauge-high"></i> Command Center
-            </a>
-            <a href="<?= base_url('tracking') ?>" class="nav-link <?= uri_string() === 'tracking' ? 'active' : '' ?>">
-                <i class="fa-solid fa-map-location-dot"></i> Live GPS Tracking
-            </a>
+        <!-- Role Pill -->
+        <div class="sidebar-user-role">
+            <span class="role-label"><i class="fa-solid fa-shield-halved me-1 text-muted"></i> Role</span>
+            <span class="role-pill" style="color: <?= $currentBadge['color'] ?>; background: <?= $currentBadge['bg'] ?>;">
+                <?= esc($currentBadge['label']) ?>
+            </span>
+        </div>
 
-            <div class="nav-category">Logistics & Operations</div>
-            <a href="<?= base_url('trips') ?>" class="nav-link <?= strpos(uri_string(), 'trips') === 0 ? 'active' : '' ?>">
-                <i class="fa-solid fa-route"></i> Trip Dispatch
-            </a>
-            <a href="<?= base_url('vehicles') ?>" class="nav-link <?= strpos(uri_string(), 'vehicles') === 0 ? 'active' : '' ?>">
-                <i class="fa-solid fa-truck"></i> Vehicle Fleet
-            </a>
-            <a href="<?= base_url('drivers') ?>" class="nav-link <?= strpos(uri_string(), 'drivers') === 0 ? 'active' : '' ?>">
-                <i class="fa-solid fa-id-card"></i> Drivers & Operators
-            </a>
+        <!-- Dynamic Role-Tailored Navigation (Eliminates Redundancy) -->
+        <nav class="sidebar-nav">
+            <?php if ($userRole === 'admin' || $userRole === 'dispatcher'): ?>
+                <div class="nav-section-title">Fleet Monitoring</div>
+                <a href="<?= base_url('dashboard') ?>" class="sidebar-link <?= uri_string() === '' || uri_string() === 'dashboard' ? 'active' : '' ?>">
+                    <i class="fa-solid fa-chart-line"></i> Command Center
+                </a>
+                <a href="<?= base_url('tracking') ?>" class="sidebar-link <?= uri_string() === 'tracking' ? 'active' : '' ?>">
+                    <i class="fa-solid fa-satellite-dish"></i> Live GPS Radar
+                </a>
+            <?php endif; ?>
 
-            <div class="nav-category">Maintenance & Fuel</div>
-            <a href="<?= base_url('maintenance') ?>" class="nav-link <?= strpos(uri_string(), 'maintenance') === 0 ? 'active' : '' ?>">
-                <i class="fa-solid fa-screwdriver-wrench"></i> Work Orders & Service
-            </a>
-            <a href="<?= base_url('fuel') ?>" class="nav-link <?= strpos(uri_string(), 'fuel') === 0 ? 'active' : '' ?>">
-                <i class="fa-solid fa-gas-pump"></i> Fuel & Energy Logs
-            </a>
+            <?php if ($userRole === 'admin' || $userRole === 'dispatcher'): ?>
+                <div class="nav-section-title">Logistics & Dispatches</div>
+                <a href="<?= base_url('trips') ?>" class="sidebar-link <?= strpos(uri_string(), 'trips') === 0 ? 'active' : '' ?>">
+                    <i class="fa-solid fa-route"></i> Trip Dispatches
+                </a>
+                <a href="<?= base_url('vehicles') ?>" class="sidebar-link <?= strpos(uri_string(), 'vehicles') === 0 ? 'active' : '' ?>">
+                    <i class="fa-solid fa-truck"></i> Vehicle Fleet
+                </a>
+                <a href="<?= base_url('drivers') ?>" class="sidebar-link <?= strpos(uri_string(), 'drivers') === 0 ? 'active' : '' ?>">
+                    <i class="fa-solid fa-id-card"></i> Driver Personnel
+                </a>
+                <a href="<?= base_url('fuel') ?>" class="sidebar-link <?= strpos(uri_string(), 'fuel') === 0 ? 'active' : '' ?>">
+                    <i class="fa-solid fa-gas-pump"></i> Fuel Records
+                </a>
+            <?php endif; ?>
 
-            <div class="nav-category">Analytics & Driver PWA</div>
-            <a href="<?= base_url('reports') ?>" class="nav-link <?= strpos(uri_string(), 'reports') === 0 ? 'active' : '' ?>">
-                <i class="fa-solid fa-chart-pie"></i> Reports & Analytics
-            </a>
-            <a href="<?= base_url('driver/trips') ?>" target="_blank" class="nav-link">
-                <i class="fa-solid fa-mobile-screen"></i> Driver Mobile PWA <i class="fa-solid fa-arrow-up-right-from-square small ms-auto text-muted"></i>
-            </a>
+            <?php if ($userRole === 'maintenance'): ?>
+                <div class="nav-section-title">Technical Service</div>
+                <a href="<?= base_url('maintenance') ?>" class="sidebar-link <?= strpos(uri_string(), 'maintenance') === 0 ? 'active' : '' ?>">
+                    <i class="fa-solid fa-wrench"></i> Service Orders & PMS
+                </a>
+                <a href="<?= base_url('vehicles') ?>" class="sidebar-link <?= strpos(uri_string(), 'vehicles') === 0 ? 'active' : '' ?>">
+                    <i class="fa-solid fa-truck"></i> Vehicle Asset Health
+                </a>
+                <a href="<?= base_url('tracking') ?>" class="sidebar-link <?= uri_string() === 'tracking' ? 'active' : '' ?>">
+                    <i class="fa-solid fa-satellite-dish"></i> Telematics & Diagnostics
+                </a>
+            <?php endif; ?>
+
+            <?php if ($userRole === 'admin'): ?>
+                <div class="nav-section-title">Garage & Intelligence</div>
+                <a href="<?= base_url('maintenance') ?>" class="sidebar-link <?= strpos(uri_string(), 'maintenance') === 0 ? 'active' : '' ?>">
+                    <i class="fa-solid fa-wrench"></i> Work Orders & PMS
+                </a>
+                <a href="<?= base_url('reports') ?>" class="sidebar-link <?= strpos(uri_string(), 'reports') === 0 ? 'active' : '' ?>">
+                    <i class="fa-solid fa-file-invoice"></i> Cost & Analytics
+                </a>
+            <?php endif; ?>
+
+            <?php if ($userRole === 'admin' || $userRole === 'dispatcher'): ?>
+                <div class="nav-section-title">Mobile Portal</div>
+                <a href="<?= base_url('driver/trips') ?>" target="_blank" class="sidebar-link">
+                    <i class="fa-solid fa-mobile-screen"></i> Driver Mobile PWA <i class="fa-solid fa-arrow-up-right-from-square ms-auto text-muted small"></i>
+                </a>
+            <?php endif; ?>
         </nav>
 
-        <div class="position-absolute bottom-0 start-0 w-100 p-3" style="border-top: 1px solid rgba(255,255,255,0.08);">
-            <div class="d-flex align-items-center justify-content-between text-white-50 small">
-                <div>
-                    <i class="fa-solid fa-server text-success me-1"></i> MySQL + CI4
-                </div>
-                <span class="badge bg-secondary">v4.7.4</span>
-            </div>
+        <!-- Sidebar Footer -->
+        <div class="sidebar-footer">
+            <span class="mono"><i class="fa-solid fa-database text-success me-1"></i> MySQL 8</span>
+            <span class="mono">v1.1</span>
         </div>
     </aside>
 
-    <!-- Main Wrapper -->
+    <!-- Main Content Area -->
     <div id="main-wrapper">
-        <!-- Top Navbar -->
-        <header class="top-navbar">
+        <!-- Top Header Bar -->
+        <header class="top-header">
             <div class="d-flex align-items-center gap-3">
-                <span class="text-muted"><i class="fa-regular fa-clock me-1"></i> Live Operations</span>
-                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">
-                    <i class="fa-solid fa-satellite-dish me-1"></i> GPS Feed Online
-                </span>
+                <div class="telemetry-pulse">
+                    <div class="pulse-dot"></div>
+                    <span>Telematics Online</span>
+                </div>
+                <span class="text-muted small d-none d-md-inline">|</span>
+                <span class="small text-muted font-monospace d-none d-md-inline">SLA: 99.98% Available</span>
             </div>
 
+            <!-- Profile & Session Dropdown -->
             <div class="d-flex align-items-center gap-3">
                 <div class="dropdown">
-                    <button class="btn btn-outline-secondary btn-sm dropdown-toggle d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown">
-                        <i class="fa-solid fa-circle-user text-primary"></i>
-                        <span><?= esc(session()->get('user_name') ?? 'Admin User') ?></span>
-                        <span class="badge bg-dark-subtle text-dark"><?= esc(ucfirst(session()->get('user_role') ?? 'admin')) ?></span>
+                    <button class="btn btn-corp-secondary d-flex align-items-center gap-2 py-1 px-3" type="button" data-bs-toggle="dropdown">
+                        <i class="fa-solid fa-circle-user text-primary-accent" style="color: #2563eb;"></i>
+                        <span class="small fw-semibold"><?= esc($userName) ?></span>
+                        <i class="fa-solid fa-chevron-down text-muted" style="font-size: 0.65rem;"></i>
                     </button>
-                    <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-                        <li><h6 class="dropdown-header"><?= esc(session()->get('user_email') ?? 'admin@fleet.com') ?></h6></li>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-sm border mt-1">
+                        <li>
+                            <div class="px-3 py-2 border-bottom">
+                                <strong class="small d-block text-dark"><?= esc($userName) ?></strong>
+                                <span class="small text-muted font-monospace"><?= esc($userEmail) ?></span>
+                            </div>
+                        </li>
+                        <li>
+                            <div class="px-3 py-1 text-muted small">
+                                Role: <strong class="text-dark"><?= ucfirst(esc($userRole)) ?></strong>
+                            </div>
+                        </li>
                         <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item text-danger" href="<?= base_url('logout') ?>"><i class="fa-solid fa-right-from-bracket me-2"></i>Sign Out</a></li>
+                        <li>
+                            <a class="dropdown-item text-danger small py-2" href="<?= base_url('logout') ?>">
+                                <i class="fa-solid fa-arrow-right-from-bracket me-2"></i> Sign Out
+                            </a>
+                        </li>
                     </ul>
                 </div>
             </div>
         </header>
 
-        <!-- Dynamic Content Body -->
-        <main class="content-area">
+        <!-- Flash Notifications (Global) -->
+        <div class="px-4 pt-3 pb-0">
             <?php if (session()->getFlashdata('success')): ?>
-                <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm mb-4" role="alert">
-                    <i class="fa-solid fa-circle-check me-2"></i> <?= session()->getFlashdata('success') ?>
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                <div class="alert alert-success alert-dismissible fade show p-3 rounded-2 border-0 shadow-sm d-flex align-items-center" role="alert" style="background: #f0fdf4; color: #166534; border-left: 4px solid #16a34a !important;">
+                    <i class="fa-solid fa-circle-check me-2 fs-5"></i>
+                    <div><?= session()->getFlashdata('success') ?></div>
+                    <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
                 </div>
             <?php endif; ?>
 
             <?php if (session()->getFlashdata('error')): ?>
-                <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm mb-4" role="alert">
-                    <i class="fa-solid fa-triangle-exclamation me-2"></i> <?= session()->getFlashdata('error') ?>
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                <div class="alert alert-danger alert-dismissible fade show p-3 rounded-2 border-0 shadow-sm d-flex align-items-center" role="alert" style="background: #fef2f2; color: #991b1b; border-left: 4px solid #dc2626 !important;">
+                    <i class="fa-solid fa-triangle-exclamation me-2 fs-5"></i>
+                    <div><?= session()->getFlashdata('error') ?></div>
+                    <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
                 </div>
             <?php endif; ?>
+        </div>
 
-            <?php if (session()->getFlashdata('errors')): ?>
-                <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm mb-4" role="alert">
-                    <i class="fa-solid fa-triangle-exclamation me-2"></i><strong>Validation errors:</strong>
-                    <ul class="mb-0 mt-2">
-                        <?php foreach (session()->getFlashdata('errors') as $err): ?>
-                            <li><?= esc($err) ?></li>
-                        <?php endforeach; ?>
-                    </ul>
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            <?php endif; ?>
-
+        <!-- Rendered Page Content -->
+        <main class="content-canvas">
             <?= $this->renderSection('content') ?>
         </main>
     </div>
 
-    <!-- Bootstrap 5 JS -->
+    <!-- Bootstrap Bundle JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <?= $this->renderSection('scripts') ?>
 </body>
