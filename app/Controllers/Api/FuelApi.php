@@ -1,0 +1,70 @@
+<?php
+
+namespace App\Controllers\Api;
+
+use App\Controllers\BaseController;
+use App\Models\FuelLogModel;
+use App\Models\VehicleModel;
+
+class FuelApi extends BaseController
+{
+    public function log()
+    {
+        $fuelModel = new FuelLogModel();
+        $vehicleModel = new VehicleModel();
+
+        $vehicleId = (int)$this->request->getPost('vehicle_id');
+        $liters = (float)$this->request->getPost('liters');
+        $cost = (float)$this->request->getPost('total_cost');
+        $odo = (float)$this->request->getPost('odometer_km');
+        $station = $this->request->getPost('fuel_station');
+
+        // Handle receipt image upload
+        $receiptFile = $this->request->getFile('receipt_image');
+        $receiptName = null;
+        if ($receiptFile && $receiptFile->isValid() && !$receiptFile->hasMoved()) {
+            $receiptName = $receiptFile->getRandomName();
+            $receiptFile->move(WRITEPATH . 'uploads/receipts', $receiptName);
+        }
+
+        $costPerLiter = $liters > 0 ? round($cost / $liters, 2) : 0;
+        $receiptNo = 'REC-' . date('Ymd') . '-' . rand(100, 999);
+
+        $data = [
+            'receipt_no'     => $receiptNo,
+            'vehicle_id'     => $vehicleId,
+            'driver_id'      => (int)$this->request->getPost('driver_id') ?: null,
+            'fuel_date'      => date('Y-m-d'),
+            'odometer_km'    => $odo,
+            'liters'         => $liters,
+            'cost_per_liter' => $costPerLiter,
+            'total_cost'     => $cost,
+            'fuel_station'   => $station ?: 'Commercial Gas Station',
+            'notes'          => $receiptName ? "Receipt uploaded: {$receiptName}" : 'PWA Mobile Log',
+        ];
+
+        $fuelModel->insert($data);
+
+        // Update vehicle state
+        $vehicle = $vehicleModel->find($vehicleId);
+        $newOdo = ($odo > 0) ? $odo : ($vehicle ? (float)$vehicle['odometer_km'] : 0.00);
+        $vehicleModel->update($vehicleId, [
+            'odometer_km'        => $newOdo,
+            'current_fuel_level' => 100.00,
+        ]);
+
+        $referer = $this->request->getServer('HTTP_REFERER') ?? '';
+        $isDriverView = str_contains($referer, 'driver/trips');
+        if ($isDriverView || (!$this->request->isAJAX() && !$this->request->is('json') && strpos($this->request->getHeaderLine('Accept'), 'application/json') === false)) {
+            return redirect()->to('/driver/trips')->with('success', "Fuel receipt {$receiptNo} logged successfully. Vehicle refueled to 100%.");
+        }
+
+        return $this->response->setJSON([
+            'status'      => 'success',
+            'message'     => 'Fuel purchase logged successfully.',
+            'receipt_no'  => $receiptNo,
+            'odometer_km' => $newOdo,
+            'file'        => $receiptName,
+        ]);
+    }
+}
