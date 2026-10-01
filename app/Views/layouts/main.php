@@ -572,11 +572,19 @@
                     <span>Telematics Online</span>
                 </div>
                 <span class="text-muted small d-none d-md-inline">|</span>
-                <span class="small text-muted font-monospace d-none d-md-inline">SLA: 99.98% Available</span>
+                <span class="badge bg-white text-dark border d-none d-lg-inline-flex align-items-center gap-1 shadow-sm" style="font-size: 0.72rem; padding: 4px 8px;" title="Active Security: CSRF Enabled, Secure Headers (SAMEORIGIN, nosniff), Rate-Limited Auth, RBAC Enforced">
+                    <i class="fa-solid fa-shield-halved text-success"></i> Secured System (CSRF &bull; RBAC &bull; Rate-Limit)
+                </span>
             </div>
 
-            <!-- Profile & Session Dropdown -->
-            <div class="d-flex align-items-center gap-3">
+            <!-- Profile & Actions Dropdown -->
+            <div class="d-flex align-items-center gap-2">
+                <!-- System Guide & User Manual Trigger -->
+                <button type="button" class="btn btn-corp-secondary d-flex align-items-center gap-2 py-1 px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#systemGuideModal" title="Open Complete System Operations & Security Guide">
+                    <i class="fa-solid fa-book-open text-primary"></i>
+                    <span class="small fw-semibold d-none d-sm-inline">System Manual</span>
+                </button>
+
                 <div class="dropdown">
                     <button class="btn btn-corp-secondary d-flex align-items-center gap-2 py-1 px-3" type="button" data-bs-toggle="dropdown">
                         <i class="fa-solid fa-circle-user text-primary-accent" style="color: #2563eb;"></i>
@@ -596,6 +604,11 @@
                             </div>
                         </li>
                         <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <a class="dropdown-item small py-2" href="#" data-bs-toggle="modal" data-bs-target="#systemGuideModal">
+                                <i class="fa-solid fa-circle-question me-2 text-primary"></i> System Guide & Cheatsheet
+                            </a>
+                        </li>
                         <li>
                             <a class="dropdown-item text-danger small py-2" href="<?= base_url('logout') ?>">
                                 <i class="fa-solid fa-arrow-right-from-bracket me-2"></i> Sign Out
@@ -629,6 +642,304 @@
         <main class="content-canvas">
             <?= $this->renderSection('content') ?>
         </main>
+    </div>
+
+    <!-- System Operations & Security Architecture Manual Modal -->
+    <div class="modal fade" id="systemGuideModal" tabindex="-1" aria-labelledby="systemGuideModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content" style="border-radius: 12px; border: 1px solid var(--border-subtle); box-shadow: 0 10px 30px rgba(0,0,0,0.15);">
+                <!-- Modal Header -->
+                <div class="modal-header border-bottom py-3 px-4" style="background: #f8fafc;">
+                    <div class="d-flex align-items-center gap-3">
+                        <div style="width: 40px; height: 40px; border-radius: 8px; background: #0f172a; color: #ffffff; display: grid; place-items: center; font-size: 1.1rem;">
+                            <i class="fa-solid fa-book-open-reader"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title fw-bold text-dark mb-0" id="systemGuideModalLabel">FleetPulse Operations & Security Manual</h5>
+                            <span class="small text-muted font-monospace">Architecture, Operational Workflows & Active Security Protocols</span>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <!-- Navigation Tabs -->
+                <div class="border-bottom px-4 pt-2" style="background: #f8fafc;">
+                    <ul class="nav nav-tabs border-0" id="guideTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active fw-semibold small" id="workflows-tab" data-bs-toggle="tab" data-bs-target="#tab-workflows" type="button" role="tab">
+                                <i class="fa-solid fa-diagram-project me-1 text-primary"></i> 1. Core Lifecycle & Modules
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link fw-semibold small" id="roles-tab" data-bs-toggle="tab" data-bs-target="#tab-roles" type="button" role="tab">
+                                <i class="fa-solid fa-users-gear me-1 text-success"></i> 2. Roles & Access Matrix
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link fw-semibold small" id="security-tab" data-bs-toggle="tab" data-bs-target="#tab-security" type="button" role="tab">
+                                <i class="fa-solid fa-shield-halved me-1 text-danger"></i> 3. Security Safeguards
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link fw-semibold small" id="radar-tab" data-bs-toggle="tab" data-bs-target="#tab-radar" type="button" role="tab">
+                                <i class="fa-brands fa-google me-1 text-info"></i> 4. Google Maps & Radar
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link fw-semibold small" id="api-tab" data-bs-toggle="tab" data-bs-target="#tab-api" type="button" role="tab">
+                                <i class="fa-solid fa-terminal me-1 text-warning"></i> 5. REST & IoT APIs
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Modal Body -->
+                <div class="modal-body p-4" style="font-size: 0.86rem; line-height: 1.6;">
+                    <div class="tab-content" id="guideTabsContent">
+                        
+                        <!-- TAB 1: Core Lifecycle & Modules -->
+                        <div class="tab-pane fade show active" id="tab-workflows" role="tabpanel">
+                            <div class="alert alert-primary border-0 rounded-2 py-2 px-3 mb-4 d-flex align-items-center gap-2">
+                                <i class="fa-solid fa-circle-info fs-5"></i>
+                                <span>FleetPulse orchestrates commercial freight through a closed-loop verified workflow from asset allocation to trip arrival.</span>
+                            </div>
+
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <div class="p-3 border rounded-2 bg-white h-100">
+                                        <div class="d-flex align-items-center gap-2 mb-2">
+                                            <span class="badge bg-primary">Module 01</span>
+                                            <strong class="text-dark">Vehicle Fleet Registry</strong>
+                                        </div>
+                                        <p class="text-muted small mb-2">Maintains complete records of all transport assets, including VIN, plate number, fuel tank capacity, current odometer, and PMS thresholds.</p>
+                                        <ul class="small text-muted ps-3 mb-0">
+                                            <li><strong>Statuses:</strong> Active, In Transit, Maintenance, Out of Service.</li>
+                                            <li>Tracks engine status, battery voltage, and coolant temperature.</li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <div class="p-3 border rounded-2 bg-white h-100">
+                                        <div class="d-flex align-items-center gap-2 mb-2">
+                                            <span class="badge bg-primary">Module 02</span>
+                                            <strong class="text-dark">Driver Personnel & Compliance</strong>
+                                        </div>
+                                        <p class="text-muted small mb-2">Manages certified operators, heavy-vehicle licenses, emergency contacts, and algorithmic safety scoring.</p>
+                                        <ul class="small text-muted ps-3 mb-0">
+                                            <li><strong>Safety Scoring:</strong> Penalizes overspeeding incidents (>80 km/h) automatically.</li>
+                                            <li>Prevents dispatching drivers with expired licenses or unverified status.</li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <div class="p-3 border rounded-2 bg-white h-100">
+                                        <div class="d-flex align-items-center gap-2 mb-2">
+                                            <span class="badge bg-primary">Module 03</span>
+                                            <strong class="text-dark">Trip Dispatch & Waybills</strong>
+                                        </div>
+                                        <p class="text-muted small mb-2">Assigns truck and driver to a corridor with auto-calculated OSRM road distance, scheduled departure, and cargo tracking.</p>
+                                        <ul class="small text-muted ps-3 mb-0">
+                                            <li><strong>Anti-Fraud Odometer Lock:</strong> At trip completion, arrival odometer is logged and cross-verified against route distance.</li>
+                                            <li>Dispatches alert drivers via simulated SMS transmission.</li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <div class="p-3 border rounded-2 bg-white h-100">
+                                        <div class="d-flex align-items-center gap-2 mb-2">
+                                            <span class="badge bg-primary">Module 04</span>
+                                            <strong class="text-dark">Technical Shop & Maintenance (PMS)</strong>
+                                        </div>
+                                        <p class="text-muted small mb-2">Automates preventive maintenance intervals (every 10,000 km) and captures real-time OBD-II vehicle diagnostic error codes.</p>
+                                        <ul class="small text-muted ps-3 mb-0">
+                                            <li><strong>OBD-II Alerts:</strong> Engine fault codes (e.g. P0420) instantly trigger high-priority work orders.</li>
+                                            <li>Completing service recalibrates the next maintenance threshold.</li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-12">
+                                    <div class="p-3 border rounded-2 bg-white">
+                                        <div class="d-flex align-items-center gap-2 mb-2">
+                                            <span class="badge bg-primary">Module 05</span>
+                                            <strong class="text-dark">Fuel Logging & Financial Audits</strong>
+                                        </div>
+                                        <p class="text-muted small mb-1">Captures fuel volume (liters), cost (₱), odometer readings, and receipt image uploads. Computes the executive Fleet Cost per Kilometer metric (Total Operating Expenses &divide; Total Fleet Distance) to identify operational wastage.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- TAB 2: Roles & Permissions (RBAC) -->
+                        <div class="tab-pane fade" id="tab-roles" role="tabpanel">
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-sm align-middle">
+                                    <thead class="table-light">
+                                        <tr class="small text-uppercase">
+                                            <th>Role</th>
+                                            <th>Command Center</th>
+                                            <th>Vehicles & Drivers</th>
+                                            <th>Trips Dispatch</th>
+                                            <th>GPS Radar</th>
+                                            <th>Maintenance PMS</th>
+                                            <th>Financial Reports</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="small">
+                                        <tr>
+                                            <td>
+                                                <span class="badge" style="background:#3b82f6;">Administrator</span>
+                                                <div class="text-muted" style="font-size:0.7rem;">Chief Fleet Director</div>
+                                            </td>
+                                            <td class="text-success text-center"><i class="fa-solid fa-check"></i> Full</td>
+                                            <td class="text-success text-center"><i class="fa-solid fa-check"></i> Full</td>
+                                            <td class="text-success text-center"><i class="fa-solid fa-check"></i> Full</td>
+                                            <td class="text-success text-center"><i class="fa-solid fa-check"></i> Full</td>
+                                            <td class="text-success text-center"><i class="fa-solid fa-check"></i> Full</td>
+                                            <td class="text-success text-center"><i class="fa-solid fa-check"></i> Full</td>
+                                        </tr>
+                                        <tr>
+                                            <td>
+                                                <span class="badge" style="background:#10b981;">Dispatcher</span>
+                                                <div class="text-muted" style="font-size:0.7rem;">Logistics Coordinator</div>
+                                            </td>
+                                            <td class="text-success text-center"><i class="fa-solid fa-check"></i> View</td>
+                                            <td class="text-success text-center"><i class="fa-solid fa-check"></i> Manage</td>
+                                            <td class="text-success text-center"><i class="fa-solid fa-check"></i> Create / Complete</td>
+                                            <td class="text-success text-center"><i class="fa-solid fa-check"></i> Live Stream</td>
+                                            <td class="text-muted text-center"><i class="fa-solid fa-minus"></i> No Access</td>
+                                            <td class="text-muted text-center"><i class="fa-solid fa-minus"></i> No Access</td>
+                                        </tr>
+                                        <tr>
+                                            <td>
+                                                <span class="badge" style="background:#f59e0b;">Maintenance</span>
+                                                <div class="text-muted" style="font-size:0.7rem;">Workshop Supervisor</div>
+                                            </td>
+                                            <td class="text-success text-center"><i class="fa-solid fa-check"></i> Telematics</td>
+                                            <td class="text-primary text-center"><i class="fa-solid fa-eye"></i> View Only</td>
+                                            <td class="text-muted text-center"><i class="fa-solid fa-minus"></i> No Access</td>
+                                            <td class="text-success text-center"><i class="fa-solid fa-check"></i> Telematics</td>
+                                            <td class="text-success text-center"><i class="fa-solid fa-check"></i> Work Orders & OBD</td>
+                                            <td class="text-muted text-center"><i class="fa-solid fa-minus"></i> No Access</td>
+                                        </tr>
+                                        <tr>
+                                            <td>
+                                                <span class="badge" style="background:#06b6d4;">Driver</span>
+                                                <div class="text-muted" style="font-size:0.7rem;">Commercial Operator</div>
+                                            </td>
+                                            <td class="text-muted text-center"><i class="fa-solid fa-minus"></i> PWA Portal</td>
+                                            <td class="text-muted text-center"><i class="fa-solid fa-minus"></i> Own Truck</td>
+                                            <td class="text-success text-center"><i class="fa-solid fa-check"></i> Start / End</td>
+                                            <td class="text-primary text-center"><i class="fa-solid fa-location-arrow"></i> GPS Ping</td>
+                                            <td class="text-muted text-center"><i class="fa-solid fa-minus"></i> Report Incident</td>
+                                            <td class="text-muted text-center"><i class="fa-solid fa-minus"></i> Submit Receipt</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- TAB 3: Security Safeguards -->
+                        <div class="tab-pane fade" id="tab-security" role="tabpanel">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <div class="p-3 border rounded-2 bg-white">
+                                        <div class="d-flex align-items-center gap-2 mb-2">
+                                            <i class="fa-solid fa-shield-halved text-success fs-5"></i>
+                                            <strong class="text-dark">CSRF Defense Filter</strong>
+                                        </div>
+                                        <p class="text-muted small mb-0">Every web form generates a cryptographic, randomized one-time token. Submissions without a valid token are rejected, preventing Cross-Site Request Forgery attacks.</p>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <div class="p-3 border rounded-2 bg-white">
+                                        <div class="d-flex align-items-center gap-2 mb-2">
+                                            <i class="fa-solid fa-stopwatch text-danger fs-5"></i>
+                                            <strong class="text-dark">Brute-Force Rate Limiting</strong>
+                                        </div>
+                                        <p class="text-muted small mb-0">Login endpoints are throttled to a maximum of 5 attempts per minute per IP address. Exceeding attempts triggers a timed lockout countdown to prevent dictionary attacks.</p>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <div class="p-3 border rounded-2 bg-white">
+                                        <div class="d-flex align-items-center gap-2 mb-2">
+                                            <i class="fa-solid fa-cookie-bite text-warning fs-5"></i>
+                                            <strong class="text-dark">Session Fixation & Cookie Hardening</strong>
+                                        </div>
+                                        <p class="text-muted small mb-0">Session IDs are automatically regenerated upon login (`session->regenerate(true)`). Session cookies are marked <code>HttpOnly</code> and <code>SameSite=Lax</code> to prevent XSS session hijacking.</p>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <div class="p-3 border rounded-2 bg-white">
+                                        <div class="d-flex align-items-center gap-2 mb-2">
+                                            <i class="fa-solid fa-server text-primary fs-5"></i>
+                                            <strong class="text-dark">Secure HTTP Headers</strong>
+                                        </div>
+                                        <p class="text-muted small mb-0">Active responses include <code>X-Frame-Options: SAMEORIGIN</code> to prevent Clickjacking, and <code>X-Content-Type-Options: nosniff</code> to block MIME-type sniffing.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- TAB 4: Google Maps & Radar -->
+                        <div class="tab-pane fade" id="tab-radar" role="tabpanel">
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <div class="p-3 border rounded-2 bg-white">
+                                        <strong class="text-dark d-block mb-1"><i class="fa-solid fa-traffic-light text-warning me-1"></i> Google Live Traffic</strong>
+                                        <p class="text-muted small mb-0">Clicking <strong>Traffic: ON</strong> displays Google's real-time color-coded congestion overlay across major corridors, allowing dispatchers to reroute drivers around traffic jams.</p>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-4">
+                                    <div class="p-3 border rounded-2 bg-white">
+                                        <strong class="text-dark d-block mb-1"><i class="fa-solid fa-route text-primary me-1"></i> GPS Breadcrumb Trails</strong>
+                                        <p class="text-muted small mb-0">Selecting any vehicle draws its historical movement trajectory line and waypoint nodes, revealing recent speed, heading, and corridor adherence.</p>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-4">
+                                    <div class="p-3 border rounded-2 bg-white">
+                                        <strong class="text-dark d-block mb-1"><i class="fa-solid fa-location-dot text-danger me-1"></i> Geofence Resolution</strong>
+                                        <p class="text-muted small mb-0">Geographic circular fences (e.g. Manila Harbor, Clark Distribution Hub) automatically detect vehicle presence and record arrival and departure times.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- TAB 5: REST & IoT APIs -->
+                        <div class="tab-pane fade" id="tab-api" role="tabpanel">
+                            <p class="text-muted small mb-3">External GPS transponders, mobile tracking devices, and third-party enterprise tools can query the FleetPulse REST API:</p>
+                            
+                            <div class="bg-dark text-light p-3 rounded font-monospace small mb-2" style="font-size:0.75rem;">
+                                <div class="text-info mb-1"># 1. Fetch Real-Time Fleet Map with GeoJSON Collection:</div>
+                                <div>GET http://localhost:8090/api/v1/tracking</div>
+                                
+                                <div class="text-info mt-3 mb-1"># 2. Ingest GPS Transponder Coordinate:</div>
+                                <div>POST http://localhost:8090/api/v1/gps/ping</div>
+                                <div class="text-muted">{ "vehicle_id": 1, "latitude": 14.5995, "longitude": 120.9842, "speed_kmh": 65.0, "fuel_level": 88.0 }</div>
+
+                                <div class="text-info mt-3 mb-1"># 3. Calculate Road Route Corridor:</div>
+                                <div>GET http://localhost:8090/api/v1/route?origin_lat=14.58&origin_lng=120.96&dest_lat=15.18&dest_lng=120.54</div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="modal-footer border-top py-2 px-4" style="background: #f8fafc;">
+                    <span class="small text-muted me-auto"><i class="fa-solid fa-circle-check text-success me-1"></i> System Status: All 5 Security Layers & Telematics Active</span>
+                    <button type="button" class="btn btn-sm btn-corp-primary px-3" data-bs-dismiss="modal">Close Manual</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Bootstrap Bundle JS -->
