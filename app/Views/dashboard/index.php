@@ -234,8 +234,11 @@
             attributionControl: false
         }).setView([14.5995, 120.9842], 9);
 
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-            maxZoom: 19
+        // Google Maps Roadmap Layer
+        L.tileLayer('https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+            maxZoom: 20,
+            subdomains: ['0', '1', '2', '3'],
+            attribution: '&copy; Google Maps'
         }).addTo(map);
 
         L.control.zoom({ position: 'bottomright' }).addTo(map);

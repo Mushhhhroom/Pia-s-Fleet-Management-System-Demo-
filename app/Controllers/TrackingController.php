@@ -29,9 +29,13 @@ class TrackingController extends BaseController
             $v['current_geofence'] = $fence ? $fence['name'] : 'Open Corridor';
         }
 
+        $googleMapsConfig = config('GoogleMaps');
+        $apiKey = $googleMapsConfig ? $googleMapsConfig->apiKey : env('GOOGLE_MAPS_API_KEY', '');
+
         return view('tracking/index', [
-            'title'    => 'Real-Time Fleet Telematics & GPS Tracking',
-            'vehicles' => $vehicles,
+            'title'            => 'Real-Time Fleet Telematics & GPS Tracking',
+            'vehicles'         => $vehicles,
+            'googleMapsApiKey' => $apiKey,
         ]);
     }
 

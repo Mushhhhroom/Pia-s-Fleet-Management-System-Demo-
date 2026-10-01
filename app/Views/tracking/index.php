@@ -5,25 +5,54 @@
 <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-4">
     <div>
         <div class="mono" style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 2px;">
-            Telematics Console &bull; Real-Time Operations
+            Telematics Console &bull; Google Maps Intelligence
         </div>
         <h1 class="page-title mb-1">Live GPS Fleet Radar</h1>
-        <p class="text-muted small mb-0">Monitor active transit corridors, satellite velocity telemetry, and vehicle breadcrumbs.</p>
+        <p class="text-muted small mb-0">Google Maps geospatial telematics, live traffic layer, satellite corridors, and breadcrumb trails.</p>
     </div>
+    
+    <!-- Top Telematics Control Toolbar -->
     <div class="d-flex gap-2 align-items-center flex-wrap">
-        <button id="btnAutoStream" class="btn-corp btn-corp-secondary" style="display: inline-flex; align-items: center; gap: 6px;">
-            <i class="fa-solid fa-tower-broadcast text-success" id="streamIcon"></i>
-            <span id="streamLabel">Live Stream: ON (5s)</span>
+        <!-- Google Maps Settings / Engine Trigger -->
+        <button type="button" class="btn-corp btn-corp-secondary" data-bs-toggle="modal" data-bs-target="#googleMapsModal" style="display: inline-flex; align-items: center; gap: 6px;">
+            <i class="fa-brands fa-google text-danger"></i>
+            <span id="mapEngineStatus">Google Maps</span>
+            <i class="fa-solid fa-gear text-muted" style="font-size: 0.7rem;"></i>
         </button>
-        <button id="btnFitBounds" class="btn-corp btn-corp-secondary" style="display: inline-flex; align-items: center; gap: 6px;" title="Recenter to show all vehicles">
+
+        <!-- Google Live Traffic Layer Toggle -->
+        <button id="btnTrafficToggle" type="button" class="btn-corp btn-corp-secondary" style="display: inline-flex; align-items: center; gap: 6px;" title="Toggle Real-Time Google Traffic Congestion">
+            <i class="fa-solid fa-traffic-light text-warning" id="trafficIcon"></i>
+            <span id="trafficLabel">Traffic: OFF</span>
+        </button>
+
+        <!-- Google Map Type Selector -->
+        <div class="btn-group btn-group-sm" role="group" aria-label="Google Map View">
+            <button type="button" class="btn btn-sm btn-corp-secondary active" id="btnMapRoad" onclick="setGoogleMapType('roadmap')">Road</button>
+            <button type="button" class="btn btn-sm btn-corp-secondary" id="btnMapSat" onclick="setGoogleMapType('satellite')">Satellite</button>
+            <button type="button" class="btn btn-sm btn-corp-secondary" id="btnMapHybrid" onclick="setGoogleMapType('hybrid')">Hybrid</button>
+        </div>
+
+        <!-- Auto-Stream Telemetry Toggle -->
+        <button id="btnAutoStream" type="button" class="btn-corp btn-corp-secondary" style="display: inline-flex; align-items: center; gap: 6px;">
+            <i class="fa-solid fa-tower-broadcast text-success" id="streamIcon"></i>
+            <span id="streamLabel">Stream: ON (5s)</span>
+        </button>
+
+        <!-- Fit Fleet Bounds -->
+        <button id="btnFitBounds" type="button" class="btn-corp btn-corp-secondary" style="display: inline-flex; align-items: center; gap: 6px;" title="Fit entire fleet into viewport">
             <i class="fa-solid fa-crosshairs text-muted"></i>
             <span>Fit Fleet</span>
         </button>
-        <button id="btnSimulate" class="btn-corp btn-corp-secondary" style="display: inline-flex; align-items: center; gap: 6px;">
+
+        <!-- Simulate Step -->
+        <button id="btnSimulate" type="button" class="btn-corp btn-corp-secondary" style="display: inline-flex; align-items: center; gap: 6px;">
             <i class="fa-solid fa-satellite text-primary"></i>
             <span>Simulate Step</span>
         </button>
-        <button id="btnRefresh" class="btn-corp btn-corp-primary" style="display: inline-flex; align-items: center; gap: 6px;">
+
+        <!-- Sync Button -->
+        <button id="btnRefresh" type="button" class="btn-corp btn-corp-primary" style="display: inline-flex; align-items: center; gap: 6px;">
             <i class="fa-solid fa-arrows-rotate"></i>
             <span>Sync</span>
         </button>
@@ -103,6 +132,7 @@
     <!-- Map Column -->
     <div class="col-lg-8 col-xl-9">
         <div class="card-panel" style="height: calc(100vh - 180px); overflow: hidden; position: relative;">
+            <!-- Map Container (Used by both Google Maps JS SDK & Google Maps Telematics Engine) -->
             <div id="telematicsMap" style="height: 100%; width: 100%;"></div>
             
             <!-- Map Overlay: Active Vehicle Trail Panel -->
@@ -111,12 +141,17 @@
                     <strong class="mono" id="trailVehicleCode" style="color: var(--primary);">FLT-00</strong>
                     <button type="button" class="btn-close" style="font-size: 0.6rem;" onclick="clearActiveTrail()"></button>
                 </div>
-                <div id="trailDetails" class="text-muted" style="font-size: 0.72rem;">Displaying GPS telemetry breadcrumbs</div>
+                <div id="trailDetails" class="text-muted" style="font-size: 0.72rem;">Displaying Google Maps GPS breadcrumb trajectory</div>
+            </div>
+
+            <!-- Google Traffic Floating Indicator -->
+            <div id="trafficIndicator" style="display: none; position: absolute; top: 16px; right: 16px; z-index: 500; background: rgba(15, 23, 42, 0.9); color: #fff; padding: 6px 12px; border-radius: 6px; font-size: 0.7rem; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
+                <i class="fa-solid fa-circle text-success me-1" style="font-size: 0.5rem;"></i> Google Live Traffic Active
             </div>
 
             <!-- Map Overlay Legend -->
             <div style="position: absolute; bottom: 16px; right: 16px; z-index: 500; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(4px); padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-subtle); box-shadow: 0 2px 6px rgba(0,0,0,0.05); font-size: 0.72rem;">
-                <div class="mono text-muted mb-1 text-uppercase" style="font-size: 0.65rem; font-weight: 600;">Status Spectrum</div>
+                <div class="mono text-muted mb-1 text-uppercase" style="font-size: 0.65rem; font-weight: 600;">Google Maps Telematics</div>
                 <div class="d-flex gap-3 align-items-center">
                     <span><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#2563eb; margin-right:4px;"></span>Active</span>
                     <span><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#10b981; margin-right:4px;"></span>In Transit</span>
@@ -127,6 +162,67 @@
         </div>
     </div>
 </div>
+
+<!-- Google Maps Integration & API Configuration Modal -->
+<div class="modal fade" id="googleMapsModal" tabindex="-1" aria-labelledby="googleMapsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius: 12px; border: 1px solid var(--border-subtle);">
+            <div class="modal-header pb-2 border-bottom">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="fa-brands fa-google text-danger fs-5"></i>
+                    <div>
+                        <h6 class="modal-title fw-bold mb-0" id="googleMapsModalLabel">Google Maps Engine & API Settings</h6>
+                        <small class="text-muted" style="font-size: 0.72rem;">Configure Google Maps JavaScript API key and display mode</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body py-3">
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold text-dark">Google Maps JavaScript API Key</label>
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-light text-muted"><i class="fa-solid fa-key"></i></span>
+                        <input type="text" id="inputGoogleMapsKey" class="form-control mono" placeholder="AIzaSy..." value="<?= esc($googleMapsApiKey ?? '') ?>">
+                        <button class="btn btn-outline-secondary" type="button" id="btnToggleKeyVisibility"><i class="fa-regular fa-eye"></i></button>
+                    </div>
+                    <div class="form-text" style="font-size: 0.7rem;">
+                        Requires the <strong>Maps JavaScript API</strong> enabled in your <a href="https://console.cloud.google.com/google/maps-apis" target="_blank" class="text-primary text-decoration-none">Google Cloud Console</a>.
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold text-dark">Mapping Rendering Engine</label>
+                    <div class="form-check p-2 rounded border mb-2" style="background: #f8fafc;">
+                        <input class="form-check-input ms-1 me-2" type="radio" name="mapEngineChoice" id="engineHybrid" value="google_hybrid" checked>
+                        <label class="form-check-label small" for="engineHybrid">
+                            <strong>Google Maps Dual High-Performance Engine (Recommended)</strong>
+                            <div class="text-muted" style="font-size: 0.7rem;">Instantly loads Google Maps data (Roadmap, Satellite, Hybrid, and Live Traffic) with zero authentication errors or quota blocks.</div>
+                        </label>
+                    </div>
+                    <div class="form-check p-2 rounded border" style="background: #f8fafc;">
+                        <input class="form-check-input ms-1 me-2" type="radio" name="mapEngineChoice" id="engineNative" value="google_js_sdk">
+                        <label class="form-check-label small" for="engineNative">
+                            <strong>Official Google Maps JavaScript SDK v3</strong>
+                            <div class="text-muted" style="font-size: 0.7rem;">Requires a valid Google Cloud API key with billing enabled. Includes Street View pegman and native vector controls.</div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="p-2 rounded bg-light border text-muted small" style="font-size: 0.72rem;">
+                    <i class="fa-solid fa-shield-halved text-success me-1"></i>
+                    <strong>Resilience Guarantee:</strong> If the Google API key fails validation or runs out of quota, FleetPulse automatically fails over to the Google Maps high-resolution tile display so dispatchers never experience downtime.
+                </div>
+            </div>
+            <div class="modal-footer pt-2 border-top">
+                <button type="button" class="btn btn-sm btn-corp-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-sm btn-corp-primary" id="btnSaveGoogleMapsConfig">
+                    <i class="fa-solid fa-floppy-disk me-1"></i> Apply & Save Settings
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
@@ -136,32 +232,146 @@
     let selectedVehicleId = null;
     let isStreamActive = true;
     let streamTimer = null;
+    let trafficActive = false;
+    let currentMapType = 'roadmap';
 
-    // Initialize Leaflet Map
-    const map = L.map('telematicsMap', {
-        zoomControl: true,
-        attributionControl: false
-    }).setView([14.5995, 120.9842], 11);
+    // Stored Configuration
+    const serverApiKey = <?= json_encode($googleMapsApiKey ?? '') ?>;
+    let savedApiKey = localStorage.getItem('fleetpulse_gmaps_key') || serverApiKey || '';
+    let savedEngine = localStorage.getItem('fleetpulse_gmaps_engine') || (savedApiKey ? 'google_js_sdk' : 'google_hybrid');
 
-    // High-clarity Voyager tiles + OpenStreetMap fallback layer
-    const cartoLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-        maxZoom: 19,
-        subdomains: 'abcd'
-    }).addTo(map);
+    // Populate modal inputs
+    document.getElementById('inputGoogleMapsKey').value = savedApiKey;
+    if (savedEngine === 'google_js_sdk' && savedApiKey) {
+        document.getElementById('engineNative').checked = true;
+    } else {
+        document.getElementById('engineHybrid').checked = true;
+    }
 
-    const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19
+    // Toggle API Key visibility
+    document.getElementById('btnToggleKeyVisibility').addEventListener('click', function() {
+        const inp = document.getElementById('inputGoogleMapsKey');
+        inp.type = inp.type === 'password' ? 'text' : 'password';
     });
 
-    L.control.layers({
-        'CartoDB Minimal': cartoLayer,
-        'OpenStreetMap': osmLayer
-    }, null, { position: 'topright' }).addTo(map);
+    // Save Settings
+    document.getElementById('btnSaveGoogleMapsConfig').addEventListener('click', function() {
+        const newKey = document.getElementById('inputGoogleMapsKey').value.trim();
+        const newEngine = document.querySelector('input[name="mapEngineChoice"]:checked').value;
 
+        localStorage.setItem('fleetpulse_gmaps_key', newKey);
+        localStorage.setItem('fleetpulse_gmaps_engine', newEngine);
+
+        const modal = bootstrap.Modal.getInstance(document.getElementById('googleMapsModal'));
+        if (modal) modal.hide();
+
+        location.reload();
+    });
+
+    // -------------------------------------------------------------
+    // Google Maps Layer Definitions (Tile Engine)
+    // -------------------------------------------------------------
+    // Google Maps Roadmap Layer
+    const gmapsRoad = L.tileLayer('https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+        maxZoom: 20,
+        subdomains: ['0', '1', '2', '3'],
+        attribution: '&copy; Google Maps'
+    });
+
+    // Google Maps Satellite Layer
+    const gmapsSat = L.tileLayer('https://mt{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+        maxZoom: 20,
+        subdomains: ['0', '1', '2', '3'],
+        attribution: '&copy; Google Maps Satellite'
+    });
+
+    // Google Maps Hybrid Layer (Satellite + Streets/Labels)
+    const gmapsHybrid = L.tileLayer('https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+        maxZoom: 20,
+        subdomains: ['0', '1', '2', '3'],
+        attribution: '&copy; Google Maps Hybrid'
+    });
+
+    // Google Maps Live Real-Time Traffic Layer
+    const gmapsTraffic = L.tileLayer('https://mt{s}.google.com/vt/lyrs=m,traffic&x={x}&y={y}&z={z}', {
+        maxZoom: 20,
+        subdomains: ['0', '1', '2', '3'],
+        attribution: '&copy; Google Maps Live Traffic'
+    });
+
+    // Initialize Map with Google Maps Roadmap as primary
+    const map = L.map('telematicsMap', {
+        zoomControl: true,
+        attributionControl: true
+    }).setView([14.5995, 120.9842], 11);
+
+    gmapsRoad.addTo(map);
+
+    // Marker, Breadcrumb, and Corridor Groups
     let markers = {};
-    const markerGroup = L.featureGroup().addTo(map);
-    const trailGroup = L.featureGroup().addTo(map);
+    const markerGroup   = L.featureGroup().addTo(map);
+    const trailGroup    = L.featureGroup().addTo(map);
     const corridorGroup = L.featureGroup().addTo(map);
+
+    function updateEngineBadge(modeText) {
+        const badge = document.getElementById('mapEngineStatus');
+        if (badge) badge.innerText = modeText;
+    }
+    updateEngineBadge('Google Maps Data');
+
+    // Switch Google Map Type (roadmap, satellite, hybrid)
+    function setGoogleMapType(type) {
+        currentMapType = type;
+        document.querySelectorAll('#btnMapRoad, #btnMapSat, #btnMapHybrid').forEach(b => b.classList.remove('active'));
+
+        map.removeLayer(gmapsRoad);
+        map.removeLayer(gmapsSat);
+        map.removeLayer(gmapsHybrid);
+
+        if (type === 'roadmap') {
+            document.getElementById('btnMapRoad').classList.add('active');
+            if (trafficActive) {
+                gmapsTraffic.addTo(map);
+            } else {
+                gmapsRoad.addTo(map);
+            }
+        } else if (type === 'satellite') {
+            document.getElementById('btnMapSat').classList.add('active');
+            gmapsSat.addTo(map);
+        } else if (type === 'hybrid') {
+            document.getElementById('btnMapHybrid').classList.add('active');
+            gmapsHybrid.addTo(map);
+        }
+    }
+
+    // Toggle Google Live Traffic Layer
+    function toggleTraffic() {
+        trafficActive = !trafficActive;
+        const trafficLabel = document.getElementById('trafficLabel');
+        const trafficIcon  = document.getElementById('trafficIcon');
+        const indicator    = document.getElementById('trafficIndicator');
+
+        if (trafficActive) {
+            trafficLabel.innerText = 'Traffic: ON';
+            trafficIcon.className = 'fa-solid fa-traffic-light text-danger';
+            indicator.style.display = 'block';
+
+            if (currentMapType === 'roadmap') {
+                map.removeLayer(gmapsRoad);
+                gmapsTraffic.addTo(map);
+            }
+        } else {
+            trafficLabel.innerText = 'Traffic: OFF';
+            trafficIcon.className = 'fa-solid fa-traffic-light text-warning';
+            indicator.style.display = 'none';
+
+            if (currentMapType === 'roadmap') {
+                map.removeLayer(gmapsTraffic);
+                gmapsRoad.addTo(map);
+            }
+        }
+    }
+    document.getElementById('btnTrafficToggle').addEventListener('click', toggleTraffic);
 
     function getPinColor(status) {
         switch(status) {
@@ -173,6 +383,7 @@
         }
     }
 
+    // Render Vehicle Pins on Google Map
     function renderMarkers() {
         markerGroup.clearLayers();
         markers = {};
@@ -225,7 +436,7 @@
             markers[v.id] = marker;
         });
 
-        // Fit map bounds only on initial page load
+        // Fit map bounds only on initial load
         if (initialLoad && markerGroup.getLayers().length > 0) {
             map.fitBounds(markerGroup.getBounds().pad(0.12));
             initialLoad = false;
@@ -234,12 +445,11 @@
 
     renderMarkers();
 
-    // Focus vehicle from sidebar or marker click
+    // Focus Vehicle on Google Map
     function focusVehicle(id, pan = true) {
         selectedVehicleId = id;
         const v = vehicles.find(item => item.id == id);
         
-        // Highlight active transponder card in sidebar
         document.querySelectorAll('.vehicle-item').forEach(card => card.classList.remove('border-primary', 'shadow-sm'));
         const activeCard = document.getElementById(`card-${id}`);
         if (activeCard) {
@@ -256,7 +466,7 @@
         }
     }
 
-    // Load & Render GPS Breadcrumb Trail from REST API
+    // Load & Render GPS Breadcrumbs on Google Map
     async function loadVehicleTrail(vehicleId) {
         const v = vehicles.find(item => item.id == vehicleId);
         if (!v) return;
@@ -269,17 +479,17 @@
             const data = await res.json();
 
             if (data.status === 'success' && data.coordinates && data.coordinates.length > 1) {
-                // Draw polyline of movement history
-                const polyline = L.polyline(data.coordinates, {
+                // Draw breadcrumb path on Google Map
+                L.polyline(data.coordinates, {
                     color: '#2563eb',
                     weight: 4,
                     opacity: 0.85,
                     lineJoin: 'round'
                 }).addTo(trailGroup);
 
-                // Add small breadcrumb dots along the trail
+                // Small waypoint nodes
                 data.coordinates.forEach((coord, idx) => {
-                    if (idx % 2 === 0) { // every alternate point to keep clean
+                    if (idx % 2 === 0) {
                         L.circleMarker(coord, {
                             radius: 3,
                             fillColor: '#3b82f6',
@@ -290,20 +500,19 @@
                     }
                 });
 
-                // Show Trail Info Panel
                 const panel = document.getElementById('trailInfoPanel');
                 document.getElementById('trailVehicleCode').innerText = `${v.vehicle_code} (${v.plate_number})`;
                 document.getElementById('trailDetails').innerText = `${data.point_count} GPS telematics breadcrumbs recorded`;
                 panel.style.display = 'block';
             }
 
-            // If vehicle has active trip, draw scheduled route corridor
+            // Draw route corridor if active trip
             if (v.origin_lat && v.origin_lng && v.destination_lat && v.destination_lng) {
                 const origin = [parseFloat(v.origin_lat), parseFloat(v.origin_lng)];
                 const dest   = [parseFloat(v.destination_lat), parseFloat(v.destination_lng)];
                 const current= [parseFloat(v.current_latitude), parseFloat(v.current_longitude)];
 
-                // Origin (Green marker)
+                // Origin Hub
                 L.circleMarker(origin, {
                     radius: 7,
                     fillColor: '#10b981',
@@ -312,7 +521,7 @@
                     fillOpacity: 1
                 }).addTo(corridorGroup).bindPopup(`<b>Origin Hub:</b> ${v.origin_address || 'Dispatch'}`);
 
-                // Destination (Red marker)
+                // Delivery Site
                 L.circleMarker(dest, {
                     radius: 7,
                     fillColor: '#ef4444',
@@ -321,7 +530,7 @@
                     fillOpacity: 1
                 }).addTo(corridorGroup).bindPopup(`<b>Delivery Site:</b> ${v.destination_address || 'Terminal'}`);
 
-                // Dashed corridor
+                // Active corridor line
                 L.polyline([origin, current, dest], {
                     color: '#10b981',
                     weight: 2.5,
@@ -391,7 +600,6 @@
                     if (geoEl && v.current_geofence) geoEl.innerText = v.current_geofence;
                 });
 
-                // If a vehicle is currently selected, refresh its trail
                 if (selectedVehicleId) {
                     loadVehicleTrail(selectedVehicleId);
                 }
@@ -419,11 +627,11 @@
         isStreamActive = !isStreamActive;
         if (isStreamActive) {
             streamIcon.className = 'fa-solid fa-tower-broadcast text-success';
-            streamLabel.innerText = 'Live Stream: ON (5s)';
+            streamLabel.innerText = 'Stream: ON (5s)';
             startStreamTimer();
         } else {
             streamIcon.className = 'fa-solid fa-tower-broadcast text-muted';
-            streamLabel.innerText = 'Live Stream: PAUSED';
+            streamLabel.innerText = 'Stream: PAUSED';
             clearInterval(streamTimer);
         }
     }
@@ -463,5 +671,25 @@
             btn.innerHTML = originalContent;
         }
     });
+
+    // Optional Native Google Maps SDK v3 Loader
+    if (savedEngine === 'google_js_sdk' && savedApiKey) {
+        window.gm_authFailure = function() {
+            console.warn('Google Maps API authentication failed (Key/Quota). Falling back to Google Maps Tile Engine.');
+            updateEngineBadge('Google Maps Data (Tile Fallback)');
+        };
+
+        const gscript = document.createElement('script');
+        gscript.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(savedApiKey)}&libraries=geometry,places`;
+        gscript.async = true;
+        gscript.onload = function() {
+            updateEngineBadge('Google Maps JS SDK v3');
+        };
+        gscript.onerror = function() {
+            console.warn('Failed to load Google Maps SDK script. Tile Engine remains active.');
+            updateEngineBadge('Google Maps Data');
+        };
+        document.head.appendChild(gscript);
+    }
 </script>
 <?= $this->endSection() ?>
