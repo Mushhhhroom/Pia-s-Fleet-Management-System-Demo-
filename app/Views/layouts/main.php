@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -13,7 +13,7 @@
     <!-- Bootstrap 5 & FontAwesome 6 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
-    
+
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
@@ -21,17 +21,17 @@
         :root {
             --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             --font-mono: 'JetBrains Mono', monospace;
-            
+
             --sidebar-w: 250px;
             --bg-canvas: #f8fafc;
             --bg-surface: #ffffff;
             --border-subtle: #e2e8f0;
             --border-strong: #cbd5e1;
-            
+
             --text-heading: #0f172a;
             --text-body: #334155;
             --text-muted: #64748b;
-            
+
             --primary: #1e3a8a;
             --primary-accent: #2563eb;
             --sidebar-bg: #0b1324;
@@ -218,6 +218,42 @@
             min-height: 100vh;
             display: flex;
             flex-direction: column;
+            transition: margin-left 0.25s ease;
+        }
+
+        #sidebarBackdrop {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(11, 19, 36, 0.65);
+            backdrop-filter: blur(4px);
+            z-index: 1035;
+        }
+
+        @media (max-width: 991.98px) {
+            #sidebar {
+                transform: translateX(-100%);
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+            }
+            body.sidebar-open #sidebar {
+                transform: translateX(0);
+            }
+            body.sidebar-open #sidebarBackdrop {
+                display: block;
+            }
+            #main-wrapper {
+                margin-left: 0 !important;
+                width: 100% !important;
+            }
+            .top-header {
+                padding: 0 16px !important;
+            }
+            .content-canvas {
+                padding: 16px 14px 40px !important;
+            }
         }
 
         .top-header {
@@ -458,19 +494,24 @@
 </head>
 <body>
 
-    <?php 
+    <?php
         $userRole = session()->get('user_role') ?? 'dispatcher';
         $userName = session()->get('user_name') ?? 'System User';
         $userEmail = session()->get('user_email') ?? 'user@fleet.com';
 
-        // Role aesthetic configurations
+        // Role aesthetic configurations for all 7 Government RBAC roles
         $roleBadges = [
-            'admin'       => ['label' => 'Administrator', 'color' => '#3b82f6', 'bg' => 'rgba(59, 130, 246, 0.15)'],
-            'dispatcher'  => ['label' => 'Dispatch Lead', 'color' => '#10b981', 'bg' => 'rgba(16, 185, 129, 0.15)'],
-            'maintenance' => ['label' => 'Technical Shop', 'color' => '#f59e0b', 'bg' => 'rgba(245, 158, 11, 0.15)'],
-            'driver'      => ['label' => 'Driver Operator', 'color' => '#06b6d4', 'bg' => 'rgba(6, 182, 212, 0.15)'],
+            'admin'          => ['label' => 'Super Admin / Director', 'color' => '#3b82f6', 'bg' => 'rgba(59, 130, 246, 0.15)'],
+            'requestor'      => ['label' => 'Staff / Requestor', 'color' => '#8b5cf6', 'bg' => 'rgba(139, 92, 246, 0.15)'],
+            'approver_oic'   => ['label' => 'Tier 1 Approver (OIC)', 'color' => '#f59e0b', 'bg' => 'rgba(245, 158, 11, 0.15)'],
+            'approver_admin' => ['label' => 'Tier 2 Approver (Admin Head)', 'color' => '#06b6d4', 'bg' => 'rgba(6, 182, 212, 0.15)'],
+            'dispatcher'     => ['label' => 'Motorpool Dispatcher', 'color' => '#10b981', 'bg' => 'rgba(16, 185, 129, 0.15)'],
+            'guard'          => ['label' => 'Gate Security Officer', 'color' => '#64748b', 'bg' => 'rgba(100, 116, 139, 0.15)'],
+            'auditor'        => ['label' => 'COA Resident Auditor', 'color' => '#d97706', 'bg' => 'rgba(217, 119, 6, 0.15)'],
+            'driver'         => ['label' => 'Official Driver', 'color' => '#0284c7', 'bg' => 'rgba(2, 132, 199, 0.15)'],
+            'maintenance'    => ['label' => 'Safety & PMS Tech', 'color' => '#ea580c', 'bg' => 'rgba(234, 88, 12, 0.15)'],
         ];
-        $currentBadge = $roleBadges[$userRole] ?? $roleBadges['dispatcher'];
+        $currentBadge = $roleBadges[$userRole] ?? ['label' => ucfirst($userRole), 'color' => '#3b82f6', 'bg' => 'rgba(59, 130, 246, 0.15)'];
     ?>
 
     <!-- Sidebar Navigation -->
@@ -478,12 +519,12 @@
         <!-- Brand Header -->
         <div class="sidebar-brand">
             <a href="<?= base_url('/') ?>" class="brand-logo">
-                <div class="brand-icon">
-                    <i class="fa-solid fa-shapes"></i>
+                <div class="brand-icon" style="background: linear-gradient(135deg, #0A2540, #1e3a8a);">
+                    <i class="fa-solid fa-landmark"></i>
                 </div>
                 <div>
-                    <div class="brand-title">Fleet<span class="text-primary-accent" style="color: #38bdf8;">Pulse</span></div>
-                    <span class="brand-badge">Enterprise Logistics</span>
+                    <div class="brand-title">PIA <span class="text-primary-accent" style="color: #38bdf8;">Motorpool</span></div>
+                    <span class="brand-badge">Republic of the Philippines</span>
                 </div>
             </a>
         </div>
@@ -498,57 +539,71 @@
 
         <!-- Dynamic Role-Tailored Navigation (Eliminates Redundancy) -->
         <nav class="sidebar-nav">
-            <?php if ($userRole === 'admin' || $userRole === 'dispatcher'): ?>
-                <div class="nav-section-title">Fleet Monitoring</div>
-                <a href="<?= base_url('dashboard') ?>" class="sidebar-link <?= uri_string() === '' || uri_string() === 'dashboard' ? 'active' : '' ?>">
-                    <i class="fa-solid fa-chart-line"></i> Command Center
-                </a>
-                <a href="<?= base_url('tracking') ?>" class="sidebar-link <?= uri_string() === 'tracking' ? 'active' : '' ?>">
-                    <i class="fa-solid fa-satellite-dish"></i> Live GPS Radar
+            <!-- 1. OFFICIAL TRAVEL WORKFLOW (BRD & SDD) -->
+            <div class="nav-section-title">Official Travel Workflow</div>
+
+            <?php if (in_array($userRole, ['admin', 'dispatcher', 'requestor', 'approver_oic', 'approver_admin', 'auditor'])): ?>
+                <a href="<?= base_url('requests') ?>" class="sidebar-link <?= strpos(uri_string(), 'requests') === 0 ? 'active' : '' ?>">
+                    <i class="fa-solid fa-file-signature"></i> Vehicle Requests (VRS)
                 </a>
             <?php endif; ?>
 
-            <?php if ($userRole === 'admin' || $userRole === 'dispatcher'): ?>
-                <div class="nav-section-title">Logistics & Dispatches</div>
-                <a href="<?= base_url('trips') ?>" class="sidebar-link <?= strpos(uri_string(), 'trips') === 0 ? 'active' : '' ?>">
-                    <i class="fa-solid fa-route"></i> Trip Dispatches
+            <?php if (in_array($userRole, ['admin', 'approver_oic', 'approver_admin'])): ?>
+                <a href="<?= base_url('approvals') ?>" class="sidebar-link <?= strpos(uri_string(), 'approvals') === 0 ? 'active' : '' ?>">
+                    <i class="fa-solid fa-stamp"></i> Approvals & 24h SLA
+                </a>
+            <?php endif; ?>
+
+            <?php if (in_array($userRole, ['admin', 'dispatcher'])): ?>
+                <a href="<?= base_url('dispatch') ?>" class="sidebar-link <?= strpos(uri_string(), 'dispatch') === 0 ? 'active' : '' ?>">
+                    <i class="fa-solid fa-truck-fast"></i> Dispatch Console
+                </a>
+            <?php endif; ?>
+
+            <?php if (in_array($userRole, ['admin', 'dispatcher', 'driver', 'guard', 'auditor'])): ?>
+                <a href="<?= base_url('tickets') ?>" class="sidebar-link <?= strpos(uri_string(), 'tickets') === 0 ? 'active' : '' ?>">
+                    <i class="fa-solid fa-ticket"></i> Driver's Trip Tickets (e-DTT)
+                </a>
+            <?php endif; ?>
+
+            <?php if (in_array($userRole, ['admin', 'guard', 'dispatcher'])): ?>
+                <a href="<?= base_url('gate') ?>" class="sidebar-link <?= strpos(uri_string(), 'gate') === 0 ? 'active' : '' ?>">
+                    <i class="fa-solid fa-shield-halved"></i> Gate QR Checkpoint
+                </a>
+            <?php endif; ?>
+
+            <?php if (in_array($userRole, ['admin', 'auditor'])): ?>
+                <a href="<?= base_url('audit') ?>" class="sidebar-link <?= strpos(uri_string(), 'audit') === 0 ? 'active' : '' ?>">
+                    <i class="fa-solid fa-scale-balanced"></i> COA Compliance & Audits
+                </a>
+            <?php endif; ?>
+
+            <!-- 2. FLEET ASSETS & TELEMETRY -->
+            <?php if (in_array($userRole, ['admin', 'dispatcher', 'maintenance'])): ?>
+                <div class="nav-section-title">Fleet Assets & Infrastructure</div>
+                <a href="<?= base_url('dashboard') ?>" class="sidebar-link <?= uri_string() === '' || uri_string() === 'dashboard' ? 'active' : '' ?>">
+                    <i class="fa-solid fa-chart-line"></i> Command Center
                 </a>
                 <a href="<?= base_url('vehicles') ?>" class="sidebar-link <?= strpos(uri_string(), 'vehicles') === 0 ? 'active' : '' ?>">
-                    <i class="fa-solid fa-truck"></i> Vehicle Fleet
+                    <i class="fa-solid fa-truck"></i> Vehicle Fleet (5K PMS)
                 </a>
                 <a href="<?= base_url('drivers') ?>" class="sidebar-link <?= strpos(uri_string(), 'drivers') === 0 ? 'active' : '' ?>">
                     <i class="fa-solid fa-id-card"></i> Driver Personnel
                 </a>
+                <a href="<?= base_url('tracking') ?>" class="sidebar-link <?= uri_string() === 'tracking' ? 'active' : '' ?>">
+                    <i class="fa-solid fa-satellite-dish"></i> Live GPS Radar
+                </a>
                 <a href="<?= base_url('fuel') ?>" class="sidebar-link <?= strpos(uri_string(), 'fuel') === 0 ? 'active' : '' ?>">
                     <i class="fa-solid fa-gas-pump"></i> Fuel Records
                 </a>
-            <?php endif; ?>
-
-            <?php if ($userRole === 'maintenance'): ?>
-                <div class="nav-section-title">Technical Service</div>
                 <a href="<?= base_url('maintenance') ?>" class="sidebar-link <?= strpos(uri_string(), 'maintenance') === 0 ? 'active' : '' ?>">
                     <i class="fa-solid fa-wrench"></i> Service Orders & PMS
                 </a>
-                <a href="<?= base_url('vehicles') ?>" class="sidebar-link <?= strpos(uri_string(), 'vehicles') === 0 ? 'active' : '' ?>">
-                    <i class="fa-solid fa-truck"></i> Vehicle Asset Health
-                </a>
-                <a href="<?= base_url('tracking') ?>" class="sidebar-link <?= uri_string() === 'tracking' ? 'active' : '' ?>">
-                    <i class="fa-solid fa-satellite-dish"></i> Telematics & Diagnostics
-                </a>
             <?php endif; ?>
 
-            <?php if ($userRole === 'admin'): ?>
-                <div class="nav-section-title">Garage & Intelligence</div>
-                <a href="<?= base_url('maintenance') ?>" class="sidebar-link <?= strpos(uri_string(), 'maintenance') === 0 ? 'active' : '' ?>">
-                    <i class="fa-solid fa-wrench"></i> Work Orders & PMS
-                </a>
-                <a href="<?= base_url('reports') ?>" class="sidebar-link <?= strpos(uri_string(), 'reports') === 0 ? 'active' : '' ?>">
-                    <i class="fa-solid fa-file-invoice"></i> Cost & Analytics
-                </a>
-            <?php endif; ?>
-
-            <?php if ($userRole === 'admin' || $userRole === 'dispatcher'): ?>
-                <div class="nav-section-title">Mobile Portal</div>
+            <!-- 3. MOBILE PWA FOR DRIVER -->
+            <?php if (in_array($userRole, ['admin', 'dispatcher', 'driver'])): ?>
+                <div class="nav-section-title">Mobile Operations</div>
                 <a href="<?= base_url('driver/trips') ?>" target="_blank" class="sidebar-link">
                     <i class="fa-solid fa-mobile-screen"></i> Driver Mobile PWA <i class="fa-solid fa-arrow-up-right-from-square ms-auto text-muted small"></i>
                 </a>
@@ -557,16 +612,20 @@
 
         <!-- Sidebar Footer -->
         <div class="sidebar-footer">
-            <span class="mono"><i class="fa-solid fa-database text-success me-1"></i> MySQL 8</span>
-            <span class="mono">v1.1</span>
+            <span class="mono"><i class="fa-solid fa-shield-halved text-success me-1"></i> GovTech Secured</span>
+            <span class="mono">v2.0</span>
         </div>
     </aside>
+    <div id="sidebarBackdrop"></div>
 
     <!-- Main Content Area -->
     <div id="main-wrapper">
         <!-- Top Header Bar -->
         <header class="top-header">
-            <div class="d-flex align-items-center gap-3">
+            <div class="d-flex align-items-center gap-2 gap-md-3">
+                <button type="button" class="btn btn-outline-secondary btn-sm d-lg-none px-2 py-1" id="sidebarToggle" aria-label="Toggle Sidebar Menu">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
                 <div class="telemetry-pulse">
                     <div class="pulse-dot"></div>
                     <span>Telematics Online</span>
@@ -696,7 +755,7 @@
                 <!-- Modal Body -->
                 <div class="modal-body p-4" style="font-size: 0.86rem; line-height: 1.6;">
                     <div class="tab-content" id="guideTabsContent">
-                        
+
                         <!-- TAB 1: Core Lifecycle & Modules -->
                         <div class="tab-pane fade show active" id="tab-workflows" role="tabpanel">
                             <div class="alert alert-primary border-0 rounded-2 py-2 px-3 mb-4 d-flex align-items-center gap-2">
@@ -767,7 +826,7 @@
                                             <span class="badge bg-primary">Module 05</span>
                                             <strong class="text-dark">Fuel Logging & Financial Audits</strong>
                                         </div>
-                                        <p class="text-muted small mb-1">Captures fuel volume (liters), cost (₱), odometer readings, and receipt image uploads. Computes the executive Fleet Cost per Kilometer metric (Total Operating Expenses &divide; Total Fleet Distance) to identify operational wastage.</p>
+                                        <p class="text-muted small mb-1">Captures fuel volume (liters), cost (â‚±), odometer readings, and receipt image uploads. Computes the executive Fleet Cost per Kilometer metric (Total Operating Expenses &divide; Total Fleet Distance) to identify operational wastage.</p>
                                     </div>
                                 </div>
                             </div>
@@ -916,11 +975,11 @@
                         <!-- TAB 5: REST & IoT APIs -->
                         <div class="tab-pane fade" id="tab-api" role="tabpanel">
                             <p class="text-muted small mb-3">External GPS transponders, mobile tracking devices, and third-party enterprise tools can query the FleetPulse REST API:</p>
-                            
+
                             <div class="bg-dark text-light p-3 rounded font-monospace small mb-2" style="font-size:0.75rem;">
                                 <div class="text-info mb-1"># 1. Fetch Real-Time Fleet Map with GeoJSON Collection:</div>
                                 <div>GET http://localhost:8090/api/v1/tracking</div>
-                                
+
                                 <div class="text-info mt-3 mb-1"># 2. Ingest GPS Transponder Coordinate:</div>
                                 <div>POST http://localhost:8090/api/v1/gps/ping</div>
                                 <div class="text-muted">{ "vehicle_id": 1, "latitude": 14.5995, "longitude": 120.9842, "speed_kmh": 65.0, "fuel_level": 88.0 }</div>
@@ -944,6 +1003,22 @@
 
     <!-- Bootstrap Bundle JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        const sidebarBackdrop = document.getElementById('sidebarBackdrop');
+        if (sidebarToggle) {
+            sidebarToggle.addEventListener('click', function () {
+                document.body.classList.toggle('sidebar-open');
+            });
+        }
+        if (sidebarBackdrop) {
+            sidebarBackdrop.addEventListener('click', function () {
+                document.body.classList.remove('sidebar-open');
+            });
+        }
+    });
+    </script>
     <?= $this->renderSection('scripts') ?>
 </body>
 </html>

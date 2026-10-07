@@ -94,7 +94,55 @@ $routes->group('', ['filter' => 'auth'], static function ($routes) {
 
     // Driver Mobile PWA (SDD §6.2)
     $routes->get('driver/trips', 'DriverController::mobileApp');
+    $routes->post('driver/status', 'DriverController::updateDutyStatus');
     $routes->post('driver/incident', 'DriverController::reportIncident');
+
+    // =========================================================================
+    // PHILIPPINE INFORMATION AGENCY - MOTORPOOL FLEET WORKFLOW (BRD & SDD)
+    // =========================================================================
+
+    // 1. Vehicle Request Slips (ADMIN-F-018 rev2)
+    $routes->group('', ['filter' => 'role:admin,dispatcher,requestor,approver_oic,approver_admin,auditor'], static function ($routes) {
+        $routes->get('requests', 'RequestController::index');
+        $routes->get('requests/new', 'RequestController::create');
+        $routes->post('requests', 'RequestController::store');
+        $routes->get('requests/(:num)', 'RequestController::show/$1');
+        $routes->get('requests/(:num)/print', 'RequestController::printVrs/$1');
+    });
+
+    // 2. Multi-Tier Approval Portal & SLA Watcher (OIC & Admin Division Head)
+    $routes->group('', ['filter' => 'role:admin,approver_oic,approver_admin'], static function ($routes) {
+        $routes->get('approvals', 'ApprovalController::index');
+        $routes->post('approvals/(:num)/action', 'ApprovalController::action/$1');
+    });
+
+    // 3. Motorpool Dispatch Command & Heuristic Allocation Engine
+    $routes->group('', ['filter' => 'role:admin,dispatcher'], static function ($routes) {
+        $routes->get('dispatch', 'DispatchController::index');
+        $routes->get('dispatch/assign/(:num)', 'DispatchController::assign/$1');
+        $routes->post('dispatch/assign/(:num)', 'DispatchController::storeAssignment/$1');
+    });
+
+    // 4. Driver\'s Trip Tickets (ADMIN-F-001 rev1) & Dual Certifications
+    $routes->group('', ['filter' => 'role:admin,dispatcher,driver,guard,auditor'], static function ($routes) {
+        $routes->get('tickets', 'TripTicketController::index');
+        $routes->get('tickets/(:num)', 'TripTicketController::show/$1');
+        $routes->get('tickets/(:num)/print', 'TripTicketController::printDtt/$1');
+        $routes->post('tickets/(:num)/update', 'TripTicketController::updateSectionB/$1');
+    });
+
+    // 5. Compound Gate Security Checkpoint & QR Scanner
+    $routes->group('', ['filter' => 'role:admin,guard,dispatcher'], static function ($routes) {
+        $routes->get('gate', 'GateSecurityController::index');
+        $routes->match(['get', 'post'], 'gate/verify', 'GateSecurityController::verify');
+        $routes->post('gate/record', 'GateSecurityController::recordScan');
+    });
+
+    // 6. COA (Commission on Audit) & Executive Compliance
+    $routes->group('', ['filter' => 'role:admin,auditor'], static function ($routes) {
+        $routes->get('audit', 'AuditController::index');
+        $routes->get('audit/export', 'AuditController::exportCsv');
+    });
 
     // Uploaded Receipts & Documents
     $routes->get('uploads/receipts/(:segment)', 'FuelController::viewReceipt/$1');

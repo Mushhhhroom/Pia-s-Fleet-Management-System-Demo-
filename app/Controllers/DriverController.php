@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace App\Controllers;
 
@@ -6,6 +6,8 @@ use App\Models\DriverModel;
 use App\Models\VehicleModel;
 use App\Models\TripModel;
 use App\Models\IncidentModel;
+use App\Models\TripTicketModel;
+use App\Models\FuelLogModel;
 
 class DriverController extends BaseController
 {
@@ -22,48 +24,134 @@ class DriverController extends BaseController
 
     public function mobileApp()
     {
-        $driverModel = new DriverModel();
+        $driverModel   = new DriverModel();
+        $ticketModel   = new TripTicketModel();
+        $tripModel     = new TripModel();
+        $vehicleModel  = new VehicleModel();
+        $incidentModel = new IncidentModel();
+        $fuelLogModel  = new FuelLogModel();
+
         $driverId = $this->request->getGet('driver_id');
-        
+
         $driver = null;
         if ($driverId) {
             $driver = $driverModel->find($driverId);
         }
         if (!$driver && session()->get('user_id')) {
             $driver = $driverModel->where('user_id', session()->get('user_id'))->first();
+            if (!$driver && session()->get('user_email')) {
+                $driver = $driverModel->where('email', session()->get('user_email'))->first();
+            }
+            if (!$driver && session()->get('user_name')) {
+                $driver = $driverModel->where('CONCAT(first_name, " ", last_name)', session()->get('user_name'))->first();
+            }
         }
         if (!$driver) {
             $driver = $driverModel->first();
         }
 
-        $vehicleModel = new VehicleModel();
+        // Assigned vehicle
         $vehicle = null;
         if ($driver) {
             $vehicle = $vehicleModel->where('current_driver_id', $driver['id'])->first();
         }
 
-        $tripModel = new TripModel();
-        $trips = $driver ? $tripModel->where('driver_id', $driver['id'])->orderBy('id', 'DESC')->findAll() : [];
+        // 1. Official Driver's Trip Tickets (ADMIN-F-001 rev1)
+        $tripTickets = [];
+        $activeTicket = null;
+        if ($driver) {
+            $tripTickets = $ticketModel->getTicketsWithDetails(['driver_id' => $driver['id']]);
 
-        // If no vehicle directly assigned to driver, check active trip's vehicle
-        if (!$vehicle && !empty($trips)) {
-            $activeTrip = null;
-            foreach ($trips as $t) {
-                if (in_array($t['status'], ['in_transit', 'dispatched', 'scheduled'])) {
-                    $activeTrip = $t;
+            // Prefer in-transit (departed), then issued (pending gate departure), then returned (pending Section B)
+            foreach ($tripTickets as $tk) {
+                if ($tk['status'] === 'departed') {
+                    $activeTicket = $tk;
                     break;
                 }
             }
-            if ($activeTrip) {
-                $vehicle = $vehicleModel->find($activeTrip['vehicle_id']);
+            if (!$activeTicket) {
+                foreach ($tripTickets as $tk) {
+                    if ($tk['status'] === 'issued') {
+                        $activeTicket = $tk;
+                        break;
+                    }
+                }
+            }
+            if (!$activeTicket) {
+                foreach ($tripTickets as $tk) {
+                    if ($tk['status'] === 'returned') {
+                        $activeTicket = $tk;
+                        break;
+                    }
+                }
             }
         }
 
+        // 2. Freight / Waybill Trips
+        $trips = $driver ? $tripModel->where('driver_id', $driver['id'])->orderBy('id', 'DESC')->findAll() : [];
+
+        // If no vehicle directly assigned, find vehicle from active ticket or active waybill
+        if (!$vehicle) {
+            if ($activeTicket && !empty($activeTicket['vehicle_id'])) {
+                $vehicle = $vehicleModel->find($activeTicket['vehicle_id']);
+            } elseif (!empty($trips)) {
+                foreach ($trips as $t) {
+                    if (in_array($t['status'], ['in_transit', 'dispatched', 'scheduled'])) {
+                        $vehicle = $vehicleModel->find($t['vehicle_id']);
+                        break;
+                    }
+                }
+            }
+            if (!$vehicle && !empty($tripTickets)) {
+                $vehicle = $vehicleModel->find($tripTickets[0]['vehicle_id']);
+            }
+            if (!$vehicle) {
+                $vehicle = $vehicleModel->first();
+            }
+        }
+
+        // 3. Fuel Logs for this driver or vehicle
+        $recentFuelLogs = [];
+        if ($driver) {
+            $recentFuelLogs = $fuelLogModel->where('driver_id', $driver['id'])->orderBy('id', 'DESC')->findAll(10);
+            if (empty($recentFuelLogs) && $vehicle) {
+                $recentFuelLogs = $fuelLogModel->where('vehicle_id', $vehicle['id'])->orderBy('id', 'DESC')->findAll(10);
+            }
+        }
+
+        // 4. Incidents reported
+        $recentIncidents = [];
+        if ($driver) {
+            $recentIncidents = $incidentModel->where('driver_id', $driver['id'])->orderBy('id', 'DESC')->findAll(10);
+        }
+
+        // List of drivers for quick mobile switcher
+        $allDrivers = $driverModel->findAll();
+
         return view('driver/trips', [
-            'driver'  => $driver,
-            'vehicle' => $vehicle,
-            'trips'   => $trips,
+            'driver'          => $driver,
+            'vehicle'         => $vehicle,
+            'trips'           => $trips,
+            'tripTickets'     => $tripTickets,
+            'activeTicket'    => $activeTicket,
+            'recentFuelLogs'  => $recentFuelLogs,
+            'recentIncidents' => $recentIncidents,
+            'allDrivers'      => $allDrivers,
         ]);
+    }
+
+    public function updateDutyStatus()
+    {
+        $driverModel = new DriverModel();
+        $driverId = (int)$this->request->getPost('driver_id');
+        $status = $this->request->getPost('status');
+
+        if ($driverId && in_array($status, ['available', 'off_duty', 'on_trip'])) {
+            $driverModel->update($driverId, ['status' => $status]);
+            return redirect()->to('/driver/trips')->with('success', 'Driver duty status updated to ' . ucfirst(str_replace('_', ' ', $status)) . '.');
+        }
+
+        return redirect()->to('/driver/trips')->with('error', 'Unable to update duty status.');
     }
 
     public function create()
@@ -241,7 +329,7 @@ class DriverController extends BaseController
             $vehicleModel->update($vehicleId, ['status' => 'out_of_service']);
         }
 
-        // Notify dispatch via SMS (SDD §5.9)
+        // Notify dispatch via SMS (SDD Â§5.9)
         $smsSender = new \App\Libraries\SmsSender();
         $smsSender->send(
             '+63 918 555 0200',

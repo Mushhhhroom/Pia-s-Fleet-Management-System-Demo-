@@ -77,6 +77,10 @@ php_errors.log
 # Test Files
 #-------------------------
 /tests/coverage*
+/tests/cookie*.txt
+
+# Generated documentation
+/public/docs/
 
 # Don't save phpunit under version control.
 /phpunit

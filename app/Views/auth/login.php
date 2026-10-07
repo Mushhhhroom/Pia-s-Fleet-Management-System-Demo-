@@ -244,17 +244,17 @@
     <div class="login-card">
         <!-- Brand Header -->
         <div class="brand-header">
-            <div class="brand-icon">
-                <i class="fa-solid fa-shapes"></i>
+            <div class="brand-icon" style="background: linear-gradient(135deg, #0A2540, #1e3a8a);">
+                <i class="fa-solid fa-landmark"></i>
             </div>
             <div>
-                <div class="brand-title">FleetPulse <span style="color: #2563eb; font-weight: 500;">FMS</span></div>
-                <div class="brand-subtitle">Enterprise Telematics Portal</div>
+                <div class="brand-title">PIA <span style="color: #2563eb; font-weight: 700;">Motorpool</span></div>
+                <div class="brand-subtitle">Republic of the Philippines</div>
             </div>
         </div>
 
-        <div class="page-heading">Sign in to your account</div>
-        <div class="page-subtext">Access your role-tailored workspace and real-time fleet operations.</div>
+        <div class="page-heading">Fleet Management System</div>
+        <div class="page-subtext">Sign in to access official vehicle requests, approvals, dispatch, and gate security.</div>
 
         <?php if (session()->getFlashdata('error')): ?>
             <div class="alert-corporate alert-corporate-danger" role="alert">
@@ -274,10 +274,10 @@
             <?= csrf_field() ?>
 
             <div class="mb-3">
-                <label class="form-label" for="email">Work Email</label>
+                <label class="form-label" for="email">Government Work Email</label>
                 <div class="input-group-corporate">
                     <i class="fa-regular fa-envelope input-icon"></i>
-                    <input type="email" name="email" id="email" class="form-control-corporate" placeholder="corporate@fleet.com" required value="admin@fleet.com">
+                    <input type="email" name="email" id="email" class="form-control-corporate mono" placeholder="user@pia.gov.ph" required value="admin@pia.gov.ph">
                 </div>
             </div>
 
@@ -288,64 +288,100 @@
                 </div>
                 <div class="input-group-corporate">
                     <i class="fa-solid fa-lock input-icon"></i>
-                    <input type="password" name="password" id="password" class="form-control-corporate" placeholder="••••••••" required value="admin123">
+                    <input type="password" name="password" id="password" class="form-control-corporate" placeholder="••••••••" required value="Admin_PIA2026!">
                 </div>
             </div>
 
             <button type="submit" class="btn-corporate-primary">
-                <span>Authenticate Session</span>
+                <span>Sign In to System</span>
                 <i class="fa-solid fa-arrow-right" style="font-size: 0.8rem;"></i>
             </button>
         </form>
 
-        <!-- Fast Role Access Chips -->
+        <!-- Fast Role Access Chips (All 7 Government RBAC Roles) -->
         <div class="mt-4 pt-3 border-top">
             <div class="d-flex justify-content-between align-items-center mb-2">
-                <span class="mono" style="font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); font-weight: 600;">1-Click Role Access</span>
-                <span class="badge bg-light text-secondary border mono" style="font-size: 0.65rem;">DEMO PROFILES</span>
+                <span class="mono" style="font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); font-weight: 600;">1-Click Role Profiles (Demonstration)</span>
+                <span class="badge bg-light text-secondary border mono" style="font-size: 0.62rem;">7 RBAC ROLES</span>
             </div>
 
-            <div class="d-flex flex-column gap-2">
-                <button type="button" class="quick-role-btn" onclick="setCreds('admin@fleet.com', 'admin123')">
+            <div class="d-flex flex-column gap-1" style="max-height: 220px; overflow-y: auto;">
+                <button type="button" class="quick-role-btn py-1" onclick="setCreds('admin@pia.gov.ph', 'Admin_PIA2026!')">
                     <div class="d-flex align-items-center gap-2">
-                        <i class="fa-solid fa-shield-halved text-primary" style="font-size: 0.85rem; width: 16px;"></i>
-                        <span class="fw-semibold">Administrator</span>
-                        <span class="text-muted small">&bull; admin@fleet.com</span>
+                        <i class="fa-solid fa-shield-halved text-primary" style="font-size: 0.8rem; width: 14px;"></i>
+                        <span class="fw-semibold small">Super Admin</span>
+                        <span class="text-muted small" style="font-size: 0.7rem;">&bull; admin@pia.gov.ph</span>
                     </div>
-                    <span class="role-chip">admin123</span>
+                    <span class="role-chip" style="font-size: 0.65rem;">Admin</span>
                 </button>
 
-                <button type="button" class="quick-role-btn" onclick="setCreds('dispatcher@fleet.com', 'dispatch123')">
+                <button type="button" class="quick-role-btn py-1" onclick="setCreds('requestor@pia.gov.ph', 'Requestor_2026!')">
                     <div class="d-flex align-items-center gap-2">
-                        <i class="fa-solid fa-route text-success" style="font-size: 0.85rem; width: 16px;"></i>
-                        <span class="fw-semibold">Dispatcher</span>
-                        <span class="text-muted small">&bull; dispatcher@fleet.com</span>
+                        <i class="fa-solid fa-file-signature text-purple" style="color: #8b5cf6; font-size: 0.8rem; width: 14px;"></i>
+                        <span class="fw-semibold small">Requestor (Staff)</span>
+                        <span class="text-muted small" style="font-size: 0.7rem;">&bull; requestor@pia.gov.ph</span>
                     </div>
-                    <span class="role-chip">dispatch123</span>
+                    <span class="role-chip" style="font-size: 0.65rem;">Staff</span>
                 </button>
 
-                <button type="button" class="quick-role-btn" onclick="setCreds('maintenance@fleet.com', 'maint123')">
+                <button type="button" class="quick-role-btn py-1" onclick="setCreds('oic.news@pia.gov.ph', 'Oic_News2026!')">
                     <div class="d-flex align-items-center gap-2">
-                        <i class="fa-solid fa-wrench text-warning" style="font-size: 0.85rem; width: 16px;"></i>
-                        <span class="fw-semibold">Maintenance</span>
-                        <span class="text-muted small">&bull; maintenance@fleet.com</span>
+                        <i class="fa-solid fa-user-check text-warning" style="font-size: 0.8rem; width: 14px;"></i>
+                        <span class="fw-semibold small">Tier 1 Approver (OIC)</span>
+                        <span class="text-muted small" style="font-size: 0.7rem;">&bull; oic.news@pia.gov.ph</span>
                     </div>
-                    <span class="role-chip">maint123</span>
+                    <span class="role-chip" style="font-size: 0.65rem;">OIC</span>
                 </button>
 
-                <button type="button" class="quick-role-btn" onclick="setCreds('driver@fleet.com', 'driver123')">
+                <button type="button" class="quick-role-btn py-1" onclick="setCreds('admin.head@pia.gov.ph', 'AdminHead_2026!')">
                     <div class="d-flex align-items-center gap-2">
-                        <i class="fa-solid fa-mobile-screen text-info" style="font-size: 0.85rem; width: 16px;"></i>
-                        <span class="fw-semibold">Driver Operator</span>
-                        <span class="text-muted small">&bull; driver@fleet.com</span>
+                        <i class="fa-solid fa-stamp text-info" style="font-size: 0.8rem; width: 14px;"></i>
+                        <span class="fw-semibold small">Tier 2: Atty. De Peralta</span>
+                        <span class="text-muted small" style="font-size: 0.7rem;">&bull; admin.head@pia.gov.ph</span>
                     </div>
-                    <span class="role-chip">driver123</span>
+                    <span class="role-chip" style="font-size: 0.65rem;">Admin Head</span>
+                </button>
+
+                <button type="button" class="quick-role-btn py-1" onclick="setCreds('dispatcher@pia.gov.ph', 'Dispatch_2026!')">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="fa-solid fa-truck-fast text-success" style="font-size: 0.8rem; width: 14px;"></i>
+                        <span class="fw-semibold small">Motorpool Dispatcher</span>
+                        <span class="text-muted small" style="font-size: 0.7rem;">&bull; dispatcher@pia.gov.ph</span>
+                    </div>
+                    <span class="role-chip" style="font-size: 0.65rem;">Dispatch</span>
+                </button>
+
+                <button type="button" class="quick-role-btn py-1" onclick="setCreds('guard@pia.gov.ph', 'Guard_2026!')">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="fa-solid fa-qrcode text-secondary" style="font-size: 0.8rem; width: 14px;"></i>
+                        <span class="fw-semibold small">Gate Security Guard</span>
+                        <span class="text-muted small" style="font-size: 0.7rem;">&bull; guard@pia.gov.ph</span>
+                    </div>
+                    <span class="role-chip" style="font-size: 0.65rem;">Guard</span>
+                </button>
+
+                <button type="button" class="quick-role-btn py-1" onclick="setCreds('auditor@pia.gov.ph', 'Auditor_2026!')">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="fa-solid fa-scale-balanced text-danger" style="font-size: 0.8rem; width: 14px;"></i>
+                        <span class="fw-semibold small">COA Resident Auditor</span>
+                        <span class="text-muted small" style="font-size: 0.7rem;">&bull; auditor@pia.gov.ph</span>
+                    </div>
+                    <span class="role-chip" style="font-size: 0.65rem;">COA</span>
+                </button>
+
+                <button type="button" class="quick-role-btn py-1" onclick="setCreds('driver.santos@pia.gov.ph', 'Driver_2026!')">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="fa-solid fa-mobile-screen text-primary" style="font-size: 0.8rem; width: 14px;"></i>
+                        <span class="fw-semibold small">Official Driver (R. Santos)</span>
+                        <span class="text-muted small" style="font-size: 0.7rem;">&bull; driver.santos@pia.gov.ph</span>
+                    </div>
+                    <span class="role-chip" style="font-size: 0.65rem;">Driver</span>
                 </button>
             </div>
         </div>
 
         <div class="footer-note">
-            <span class="mono">FleetPulse SDD Architecture &bull; CI4 + MySQL 8</span>
+            <span class="mono">Philippine Information Agency &bull; Motorpool FMS v2.0</span>
         </div>
     </div>
 

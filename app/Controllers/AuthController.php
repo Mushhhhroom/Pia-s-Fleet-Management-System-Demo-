@@ -20,12 +20,12 @@ class AuthController extends BaseController
         $email = trim((string)$this->request->getPost('email'));
         $password = (string)$this->request->getPost('password');
 
-        // Security Layer: Brute-Force Rate Limiting (5 attempts per minute per IP)
+        // Security Layer: Brute-Force Rate Limiting (25 attempts per minute per IP)
         $throttler = \Config\Services::throttler();
         $ip = $this->request->getIPAddress();
         $throttleKey = 'login_attempt_' . md5($ip);
 
-        if ($throttler->check($throttleKey, 5, MINUTE) === false) {
+        if ($throttler->check($throttleKey, 25, MINUTE) === false) {
             $remaining = $throttler->getTokenTime();
             return redirect()->back()->with('error', "Security Alert: Too many login attempts from this network. Please wait {$remaining} seconds before attempting to sign in again.");
         }
@@ -50,10 +50,18 @@ class AuthController extends BaseController
             ];
             $session->set($sessionData);
 
-            if ($user['role'] === 'driver') {
-                return redirect()->to('/driver/trips')->with('success', 'Welcome, ' . esc($user['name']) . '! Your active assignments are ready.');
-            }
-            return redirect()->to('/')->with('success', 'Welcome back, ' . esc($user['name']) . '! Security credentials verified.');
+            $targetRoute = match ($user['role']) {
+                'driver'                         => '/driver/trips',
+                'guard'                          => '/gate',
+                'requestor'                      => '/requests',
+                'approver_oic', 'approver_admin' => '/approvals',
+                'dispatcher'                     => '/dispatch',
+                'auditor'                        => '/audit',
+                'maintenance'                    => '/maintenance',
+                default                          => '/',
+            };
+
+            return redirect()->to($targetRoute)->with('success', 'Welcome, ' . esc($user['name']) . '! Security credentials verified.');
         }
 
         return redirect()->back()->with('error', 'Invalid email or password. Please verify your credentials.');

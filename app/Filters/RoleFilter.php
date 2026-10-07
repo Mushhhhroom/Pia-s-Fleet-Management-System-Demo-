@@ -23,12 +23,16 @@ class RoleFilter implements FilterInterface
 
         $userRole = $session->get('user_role') ?? 'dispatcher';
 
-        // 2. Drivers must stay in the mobile PWA view unless accessing public/shared API
+        // 2. Drivers and Guards have dedicated specialized operational interfaces
+        $uri = $request->getUri()->getPath();
         if ($userRole === 'driver') {
-            $uri = $request->getUri()->getPath();
-            // Allow driver portal and API endpoints
-            if (!str_contains($uri, 'driver') && !str_contains($uri, 'logout') && !str_contains($uri, 'api')) {
+            if (!str_contains($uri, 'driver') && !str_contains($uri, 'logout') && !str_contains($uri, 'api') && !str_contains($uri, 'tickets')) {
                 return redirect()->to('/driver/trips')->with('error', 'Access restricted: Drivers are directed to the mobile driver portal.');
+            }
+        }
+        if ($userRole === 'guard') {
+            if (!str_contains($uri, 'gate') && !str_contains($uri, 'logout') && !str_contains($uri, 'api')) {
+                return redirect()->to('/gate')->with('error', 'Access restricted: Security officers are directed to the Gate Security Checkpoint.');
             }
         }
 
@@ -50,10 +54,14 @@ class RoleFilter implements FilterInterface
             if (!in_array($userRole, $allowedRoles, true)) {
                 // Route to appropriate default view based on role
                 $redirectUrl = match ($userRole) {
-                    'driver'      => '/driver/trips',
-                    'maintenance' => '/maintenance',
-                    'dispatcher'  => '/trips',
-                    default       => '/',
+                    'driver'                         => '/driver/trips',
+                    'guard'                          => '/gate',
+                    'maintenance'                    => '/maintenance',
+                    'dispatcher'                     => '/dispatch',
+                    'requestor'                      => '/requests',
+                    'approver_oic', 'approver_admin' => '/approvals',
+                    'auditor'                        => '/audit',
+                    default                          => '/',
                 };
 
                 return redirect()->to($redirectUrl)->with('error', 'Access Restricted: Your role (' . ucfirst($userRole) . ') does not have permission for this section.');

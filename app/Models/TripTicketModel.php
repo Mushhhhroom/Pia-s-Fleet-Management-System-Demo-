@@ -1,0 +1,102 @@
+﻿<?php
+
+namespace App\Models;
+
+use CodeIgniter\Model;
+
+class TripTicketModel extends Model
+{
+    protected $table            = 'trip_tickets';
+    protected $primaryKey       = 'id';
+    protected $useAutoIncrement = true;
+    protected $returnType       = 'array';
+    protected $allowedFields    = [
+        'ticket_serial_no', 'request_id', 'vehicle_id', 'driver_id', 'qr_crypt_token',
+        'status', 'authorized_departure', 'authorized_return', 'authorized_passengers',
+        'authorized_destination', 'authorized_purpose', 'admin_approver_name',
+        'departure_time', 'arrival_dest_time', 'departure_dest_time', 'arrival_back_time',
+        'start_odometer', 'dest_odometer', 'return_odometer', 'total_distance_km',
+        'fuel_balance_start_liters', 'fuel_issued_stock_liters', 'fuel_purchased_liters',
+        'fuel_purchased_cost', 'fuel_used_liters', 'fuel_balance_end_liters', 'fuel_efficiency_kml',
+        'fuel_anomaly_flag', 'gear_oil_liters', 'lube_oil_liters', 'grease_units',
+        'driver_certified', 'driver_certified_at', 'passenger_certified',
+        'passenger_certifier_name', 'passenger_certified_at', 'notes', 'created_at', 'updated_at'
+    ];
+    protected $useTimestamps = true;
+    protected $createdField  = 'created_at';
+    protected $updatedField  = 'updated_at';
+
+    public function getTicketsWithDetails($filters = [], $limit = null)
+    {
+        $builder = $this->select('trip_tickets.*,
+                                  vehicles.plate_number, vehicles.vehicle_code, vehicles.make, vehicles.model, vehicles.fuel_type,
+                                  drivers.driver_code, CONCAT(drivers.first_name, " ", drivers.last_name) AS driver_name, drivers.phone AS driver_phone,
+                                  trip_requests.request_number, trip_requests.requestor_name, trip_requests.destination,
+                                  offices.office_code, offices.office_name')
+                        ->join('vehicles', 'vehicles.id = trip_tickets.vehicle_id', 'left')
+                        ->join('drivers', 'drivers.id = trip_tickets.driver_id', 'left')
+                        ->join('trip_requests', 'trip_requests.id = trip_tickets.request_id', 'left')
+                        ->join('offices', 'offices.id = trip_requests.office_id', 'left')
+                        ->orderBy('trip_tickets.id', 'DESC');
+
+        if (!empty($filters['status'])) {
+            $builder->where('trip_tickets.status', $filters['status']);
+        }
+        if (!empty($filters['driver_id'])) {
+            $builder->where('trip_tickets.driver_id', $filters['driver_id']);
+        }
+        if (!empty($filters['vehicle_id'])) {
+            $builder->where('trip_tickets.vehicle_id', $filters['vehicle_id']);
+        }
+
+        if ($limit) {
+            $builder->limit($limit);
+        }
+
+        return $builder->findAll();
+    }
+
+    public function getTicketByIdWithDetails($id)
+    {
+        return $this->select('trip_tickets.*,
+                              vehicles.plate_number, vehicles.vehicle_code, vehicles.make, vehicles.model, vehicles.year, vehicles.fuel_type, vehicles.odometer_km AS vehicle_current_odometer,
+                              drivers.driver_code, CONCAT(drivers.first_name, " ", drivers.last_name) AS driver_name, drivers.phone AS driver_phone, drivers.license_number,
+                              trip_requests.request_number, trip_requests.requestor_name, trip_requests.destination, trip_requests.purpose, trip_requests.passenger_names, trip_requests.office_scope,
+                              offices.office_code, offices.office_name, offices.address AS office_address,
+                              oic_u.name AS oic_name, adm_u.name AS admin_name')
+                    ->join('vehicles', 'vehicles.id = trip_tickets.vehicle_id', 'left')
+                    ->join('drivers', 'drivers.id = trip_tickets.driver_id', 'left')
+                    ->join('trip_requests', 'trip_requests.id = trip_tickets.request_id', 'left')
+                    ->join('offices', 'offices.id = trip_requests.office_id', 'left')
+                    ->join('users AS oic_u', 'oic_u.id = trip_requests.oic_approver_id', 'left')
+                    ->join('users AS adm_u', 'adm_u.id = trip_requests.admin_approver_id', 'left')
+                    ->where('trip_tickets.id', $id)
+                    ->first();
+    }
+
+    public function findByTokenOrSerial($identifier)
+    {
+        return $this->select('trip_tickets.*,
+                              vehicles.plate_number, vehicles.vehicle_code, vehicles.make, vehicles.model, vehicles.odometer_km AS vehicle_current_odometer,
+                              drivers.driver_code, CONCAT(drivers.first_name, " ", drivers.last_name) AS driver_name, drivers.phone AS driver_phone,
+                              trip_requests.request_number, trip_requests.purpose, trip_requests.passenger_names,
+                              offices.office_name')
+                    ->join('vehicles', 'vehicles.id = trip_tickets.vehicle_id', 'left')
+                    ->join('drivers', 'drivers.id = trip_tickets.driver_id', 'left')
+                    ->join('trip_requests', 'trip_requests.id = trip_tickets.request_id', 'left')
+                    ->join('offices', 'offices.id = trip_requests.office_id', 'left')
+                    ->groupStart()
+                        ->where('trip_tickets.qr_crypt_token', $identifier)
+                        ->orWhere('trip_tickets.ticket_serial_no', $identifier)
+                    ->groupEnd()
+                    ->first();
+    }
+
+    public function generateSerialNo(): string
+    {
+        $year = date('Y');
+        $count = $this->where("ticket_serial_no LIKE 'DTT-{$year}-%'")->countAllResults();
+        $next = $count + 1;
+        return sprintf("DTT-%s-%04d", $year, $next);
+    }
+}
