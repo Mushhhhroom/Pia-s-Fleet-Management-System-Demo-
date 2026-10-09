@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 namespace App\Models;
 
@@ -16,7 +16,10 @@ class TripRequestModel extends Model
         'return_time', 'requested_driver_id', 'requested_vehicle_type', 'is_rush_request',
         'justification_file', 'justification_notes', 'status', 'oic_approver_id', 'oic_action',
         'oic_action_at', 'oic_remarks', 'admin_approver_id', 'admin_action', 'admin_action_at',
-        'admin_remarks', 'sla_deadline', 'is_sla_breached', 'created_at', 'updated_at'
+        'admin_remarks', 'sla_deadline', 'is_sla_breached',
+        'is_emergency_override', 'emergency_override_by', 'emergency_override_at',
+        'emergency_override_remarks', 'escalated_at',
+        'post_trip_doc_due', 'post_trip_doc_status', 'created_at', 'updated_at'
     ];
     protected $useTimestamps = true;
     protected $createdField  = 'created_at';

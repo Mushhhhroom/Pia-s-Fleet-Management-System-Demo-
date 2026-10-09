@@ -28,13 +28,14 @@
                     <th>Cumulative Odometer</th>
                     <th>Assigned Operator</th>
                     <th>Telemetry State</th>
+                    <th>Fleet Segregation &amp; Expiries (FR-2.1 / FR-7.1)</th>
                     <th class="text-end">Actions</th>
                 </tr>
             </thead>
             <tbody>
                 <?php if (empty($vehicles)): ?>
                     <tr>
-                        <td colspan="8" class="text-center py-5 text-muted">
+                        <td colspan="9" class="text-center py-5 text-muted">
                             <i class="fa-solid fa-truck fa-2x mb-2 d-block text-secondary opacity-50"></i>
                             No commercial vehicles enrolled in registry.
                         </td>
@@ -78,6 +79,35 @@
                                 <span class="status-badge status-<?= esc($v['status']) ?>">
                                     <?= ucfirst(str_replace('_', ' ', esc($v['status']))) ?>
                                 </span>
+                            </td>
+                            <?php
+                                // FR-2.1 fleet segregation + FR-7.1 regulatory expiries
+                                $fcat   = $v['fleet_category'] ?? 'pool';
+                                $today  = strtotime(date('Y-m-d'));
+                                $expiries = [];
+                                foreach (['lto_registration_expiry' => 'LTO', 'gsis_insurance_expiry' => 'GSIS'] as $field => $label) {
+                                    $val = $v[$field] ?? null;
+                                    if ($val === null || $val === '') { continue; }
+                                    $days = (int) round((strtotime($val) - $today) / 86400);
+                                    $cls  = $days < 0 ? 'text-danger fw-bold' : ($days <= 30 ? 'text-warning fw-semibold' : 'text-muted');
+                                    $expiries[] = '<div class="mono ' . $cls . '" style="font-size: 0.66rem;">'
+                                        . $label . ': ' . esc(substr((string) $val, 0, 10))
+                                        . ' (' . ($days < 0 ? $days . 'd overdue' : $days . 'd') . ')</div>';
+                                }
+                            ?>
+                            <td>
+                                <span class="badge <?= $fcat === 'dedicated' ? 'bg-primary' : 'bg-secondary bg-opacity-10 text-secondary border' ?>" style="font-size: 0.6rem; letter-spacing: 0.04em;">
+                                    <?= $fcat === 'dedicated' ? 'DEDICATED' : 'SHARED POOL' ?>
+                                </span>
+                                <?php if ($fcat === 'dedicated' && !empty($v['assigned_official'])): ?>
+                                    <div class="fw-medium text-muted" style="font-size: 0.7rem;">
+                                        <i class="fa-solid fa-user-tie me-1" style="font-size: 0.62rem;"></i><?= esc($v['assigned_official']) ?>
+                                    </div>
+                                <?php endif; ?>
+                                <?= implode('', $expiries) ?>
+                                <?php if (empty($expiries)): ?>
+                                    <span class="mono text-muted" style="font-size: 0.66rem; font-style: italic;">No LTO/GSIS dates on file</span>
+                                <?php endif; ?>
                             </td>
                             <td class="text-end">
                                 <div class="d-inline-flex gap-1">

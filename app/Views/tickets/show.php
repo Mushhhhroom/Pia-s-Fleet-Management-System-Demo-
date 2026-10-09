@@ -1,4 +1,4 @@
-﻿<?= $this->extend('layouts/main') ?>
+<?= $this->extend('layouts/main') ?>
 
 <?= $this->section('content') ?>
 <!-- Breadcrumbs & Header -->
@@ -267,6 +267,33 @@
                     </div>
                 </div>
 
+                <!-- B.3b Toll Expense (FR-4.1 / FR-6.2) -->
+                <div class="fw-bold text-dark small text-uppercase mb-3 pb-1 border-bottom">
+                    <i class="fa-solid fa-road-barrier text-primary me-1"></i> B.3b Toll Expense (FR-4.1 / FR-6.2)
+                </div>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold text-dark">Toll Amount (₱)</label>
+                        <input type="number" step="0.01" min="0" name="toll_expense" class="form-control form-control-sm mono" value="<?= number_format((float)($ticket['toll_expense'] ?? 0), 2, '.', '') ?>">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold text-dark">Tollway Provider</label>
+                        <select name="toll_provider" class="form-select form-select-sm">
+                            <option value="">— None / Cash —</option>
+                            <?php foreach (['autosweep' => 'AutoSweep', 'easytrip' => 'EasyTrip', 'cash' => 'Cash Lane'] as $pKey => $pLabel): ?>
+                                <option value="<?= $pKey ?>" <?= ($ticket['toll_provider'] ?? '') === $pKey ? 'selected' : '' ?>><?= $pLabel ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <div class="text-muted" style="font-size: 0.72rem;">
+                            <i class="fa-solid fa-circle-info me-1"></i>
+                            AutoSweep / EasyTrip amounts are deducted from the vehicle's registered RFID card
+                            and re-evaluated against the ₱500 low-balance threshold (FR-6.3).
+                        </div>
+                    </div>
+                </div>
+
                 <!-- B.4 Dual Digital Certifications -->
                 <div class="fw-bold text-dark small text-uppercase mb-3 pb-1 border-bottom">
                     <i class="fa-solid fa-file-contract text-primary me-1"></i> B.4 Dual Official Certifications (CSC / COA Standard)
@@ -324,6 +351,61 @@
                     </button>
                 </div>
             </form>
+        </div>
+
+        <!-- FR-5.1 Pre-Trip Safety & FR-4.2 Passenger Delay Log -->
+        <div class="card-panel mt-4">
+            <div class="p-3 border-bottom bg-light">
+                <h6 class="mb-0 fw-bold text-dark small text-uppercase">Safety &amp; Compliance Actions (FR-5.1 / FR-4.2)</h6>
+            </div>
+
+            <div class="p-4">
+                <!-- FR-5.1: BLOWBAGETS checklist -->
+                <div class="p-3 border rounded-3 mb-4" style="background: #f0f9ff;">
+                    <div class="d-flex align-items-start justify-content-between gap-3 flex-wrap">
+                        <div>
+                            <div class="fw-bold text-dark small">
+                                <i class="fa-solid fa-clipboard-check text-primary me-1"></i>
+                                Mandatory Pre-Trip BLOWBAGETS Safety Checklist (FR-5.1)
+                            </div>
+                            <div class="text-muted" style="font-size: 0.74rem;">
+                                The gate denies egress until this trip ticket carries a <strong>PASSED</strong> safety check.
+                                A single failed item locks the vehicle to Under Maintenance and auto-generates a PIR (FR-5.2).
+                            </div>
+                        </div>
+                        <a href="<?= base_url('safety/' . $ticket['id']) ?>" class="btn btn-sm btn-primary rounded-pill fw-semibold text-decoration-none">
+                            <i class="fa-solid fa-clipboard-check me-1"></i> Open Checklist
+                        </a>
+                    </div>
+                </div>
+
+                <!-- FR-4.2: 15-minute passenger delay log -->
+                <div class="p-3 border rounded-3" style="background: #fffbeb;">
+                    <div class="fw-bold text-dark small mb-2">
+                        <i class="fa-solid fa-clock text-warning me-1"></i>
+                        Passenger Delay Log — 15-Minute Rule (FR-4.2)
+                    </div>
+                    <form action="<?= base_url('tickets/' . $ticket['id'] . '/delay') ?>" method="POST" class="row g-2 align-items-end">
+                        <?= csrf_field() ?>
+                        <div class="col-sm-3">
+                            <label class="form-label small fw-semibold text-dark">Delay (minutes)</label>
+                            <input type="number" name="delay_minutes" min="1" class="form-control form-control-sm mono" required placeholder="e.g. 20">
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label small fw-semibold text-dark">Reason</label>
+                            <input type="text" name="reason" class="form-control form-control-sm" placeholder="e.g. Passenger not yet at pick-up point, road closure...">
+                        </div>
+                        <div class="col-sm-3">
+                            <button type="submit" class="btn btn-sm btn-warning fw-semibold w-100">
+                                <i class="fa-solid fa-plus me-1"></i> Log Delay
+                            </button>
+                        </div>
+                        <div class="col-12 text-muted" style="font-size: 0.7rem;">
+                            Once a delay reaches <strong>15 minutes</strong>, all dispatchers are notified automatically.
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
 </div>

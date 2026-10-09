@@ -1,4 +1,4 @@
-﻿<?= $this->extend('layouts/main') ?>
+<?= $this->extend('layouts/main') ?>
 
 <?= $this->section('content') ?>
 <!-- Page Header -->
@@ -7,13 +7,21 @@
         <div class="mono" style="font-size: 0.7rem; color: var(--primary-accent); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 2px;">
             <i class="fa-solid fa-stamp me-1"></i> Multi-Tier Governance &bull; BR-02 SLA Enforcer
         </div>
-        <h1 class="page-title mb-1">Approval Portal & 24h SLA Monitor</h1>
+        <h1 class="page-title mb-1">Approval Portal &amp; 4-Hour Escalation SLA Monitor</h1>
         <p class="text-muted small mb-0">Official review queues for Division Directors, OICs, and Administrative Division Head.</p>
     </div>
-    <div class="d-flex align-items-center gap-2">
+    <div class="d-flex align-items-center gap-2 flex-wrap">
         <span class="badge bg-white text-dark border p-2 shadow-sm small">
-            <i class="fa-solid fa-stopwatch text-danger me-1"></i> SLA Window: <strong>24 Hours</strong>
+            <i class="fa-solid fa-stopwatch text-danger me-1"></i> Tier-1 Escalation: <strong>4 Hours</strong>
         </span>
+        <span class="badge bg-white text-dark border p-2 shadow-sm small">
+            <i class="fa-solid fa-hourglass-end text-warning me-1"></i> Final Expiry: <strong>24 Hours</strong>
+        </span>
+        <?php if (!empty($emergencyOverrides)): ?>
+            <span class="badge bg-danger text-white p-2 shadow-sm small">
+                <i class="fa-solid fa-bolt me-1"></i> <?= count($emergencyOverrides) ?> Emergency Override(s)
+            </span>
+        <?php endif; ?>
     </div>
 </div>
 
@@ -46,7 +54,7 @@
             <div class="p-3 border-bottom bg-light d-flex align-items-center justify-content-between">
                 <div>
                     <h6 class="mb-0 fw-bold text-dark small text-uppercase">Tier 1: Staff / Regional Director / OIC Review Queue</h6>
-                    <div class="text-muted" style="font-size: 0.72rem;">Division chiefs must endorse or reject within the 24-hour SLA window.</div>
+                    <div class="text-muted" style="font-size: 0.72rem;">Tier-1 endorsement or rejection escalates to Tier 2 after <strong>4 hours</strong> (FR-1.4); requests expire after 24 hours.</div>
                 </div>
             </div>
             <div class="table-responsive">
@@ -57,7 +65,7 @@
                             <th>Requesting Division & Official</th>
                             <th>Destination & Purpose</th>
                             <th>Schedule</th>
-                            <th>24h SLA Countdown</th>
+                            <th>SLA Countdown (4h)</th>
                             <th class="text-end">Action</th>
                         </tr>
                     </thead>
@@ -108,6 +116,55 @@
                                         <button type="button" class="btn btn-sm btn-primary py-1 px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#actionModal<?= $r['id'] ?>">
                                             <i class="fa-solid fa-gavel me-1"></i> Review & Act
                                         </button>
+
+                                        <?php if (!empty($canOverride)): ?>
+                                            <!-- FR-1.3 Emergency Fast-Track Override -->
+                                            <button type="button" class="btn btn-sm btn-danger py-1 px-2 shadow-sm d-block w-100 mt-1" data-bs-toggle="modal" data-bs-target="#overrideModal<?= $r['id'] ?>">
+                                                <i class="fa-solid fa-bolt me-1"></i> Emergency Override
+                                            </button>
+                                            <div class="modal fade text-start" id="overrideModal<?= $r['id'] ?>" tabindex="-1">
+                                                <div class="modal-dialog modal-dialog-centered">
+                                                    <div class="modal-content border-0 shadow">
+                                                        <div class="modal-header bg-danger text-white">
+                                                            <h6 class="modal-title fw-bold">
+                                                                <i class="fa-solid fa-bolt me-1"></i> FR-1.3 Emergency Fast-Track Override
+                                                            </h6>
+                                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                                        </div>
+                                                        <form action="<?= base_url('approvals/' . $r['id'] . '/emergency') ?>" method="POST">
+                                                            <?= csrf_field() ?>
+                                                            <div class="modal-body p-4">
+                                                                <div class="alert alert-warning p-2 small rounded mb-3">
+                                                                    <strong>Administrative Division Chief / Motorpool Head authority.</strong>
+                                                                    Bypasses both approval tiers for emergency operations.
+                                                                    Post-trip documentation is due within <strong>24 hours</strong> of trip completion (FR-1.3).
+                                                                </div>
+                                                                <div class="mb-3">
+                                                                    <div class="small text-muted">VRS No:</div>
+                                                                    <div class="fw-bold text-dark mono"><?= esc($r['request_number']) ?></div>
+                                                                </div>
+                                                                <div class="mb-3">
+                                                                    <div class="small text-muted">Destination:</div>
+                                                                    <div class="fw-bold text-dark"><?= esc($r['destination']) ?></div>
+                                                                </div>
+                                                                <div class="mb-3">
+                                                                    <label class="form-label small fw-semibold text-danger">Justification Remarks <span class="text-danger">*</span></label>
+                                                                    <textarea name="remarks" class="form-control form-control-sm" rows="3" required
+                                                                              placeholder="e.g. Urgent press coverage of calamity response; full documentation to follow."></textarea>
+                                                                </div>
+                                                            </div>
+                                                            <div class="modal-footer bg-light p-3">
+                                                                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                                <button type="submit" class="btn btn-sm btn-danger px-3 fw-semibold"
+                                                                        onclick="return confirm('AUTHORIZE EMERGENCY OVERRIDE? This bypasses the two-tier approval queue and is fully audited.');">
+                                                                    <i class="fa-solid fa-bolt me-1"></i> Authorize Override
+                                                                </button>
+                                                            </div>
+                                                        </form>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        <?php endif; ?>
 
                                         <!-- Review & Act Modal -->
                                         <div class="modal fade text-start" id="actionModal<?= $r['id'] ?>" tabindex="-1">
@@ -188,7 +245,7 @@
                             <th>Requesting Office & OIC Endorser</th>
                             <th>Destination & Purpose</th>
                             <th>Schedule</th>
-                            <th>24h SLA Countdown</th>
+                            <th>SLA Countdown (4h)</th>
                             <th class="text-end">Action</th>
                         </tr>
                     </thead>
@@ -241,6 +298,50 @@
                                         <button type="button" class="btn btn-sm btn-success py-1 px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#adminModal<?= $r['id'] ?>">
                                             <i class="fa-solid fa-stamp me-1"></i> Authorize Trip
                                         </button>
+
+                                        <?php if (!empty($canOverride)): ?>
+                                            <button type="button" class="btn btn-sm btn-danger py-1 px-2 shadow-sm d-block w-100 mt-1" data-bs-toggle="modal" data-bs-target="#overrideModal2<?= $r['id'] ?>">
+                                                <i class="fa-solid fa-bolt me-1"></i> Emergency Override
+                                            </button>
+                                            <div class="modal fade text-start" id="overrideModal2<?= $r['id'] ?>" tabindex="-1">
+                                                <div class="modal-dialog modal-dialog-centered">
+                                                    <div class="modal-content border-0 shadow">
+                                                        <div class="modal-header bg-danger text-white">
+                                                            <h6 class="modal-title fw-bold">
+                                                                <i class="fa-solid fa-bolt me-1"></i> FR-1.3 Emergency Fast-Track Override
+                                                            </h6>
+                                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                                        </div>
+                                                        <form action="<?= base_url('approvals/' . $r['id'] . '/emergency') ?>" method="POST">
+                                                            <?= csrf_field() ?>
+                                                            <div class="modal-body p-4">
+                                                                <div class="alert alert-warning p-2 small rounded mb-3">
+                                                                    <strong>Administrative Division Chief / Motorpool Head authority.</strong>
+                                                                    Bypasses both approval tiers for emergency operations.
+                                                                    Post-trip documentation is due within <strong>24 hours</strong> of trip completion (FR-1.3).
+                                                                </div>
+                                                                <div class="mb-3">
+                                                                    <div class="small text-muted">VRS No:</div>
+                                                                    <div class="fw-bold text-dark mono"><?= esc($r['request_number']) ?></div>
+                                                                </div>
+                                                                <div class="mb-3">
+                                                                    <label class="form-label small fw-semibold text-danger">Justification Remarks <span class="text-danger">*</span></label>
+                                                                    <textarea name="remarks" class="form-control form-control-sm" rows="3" required
+                                                                              placeholder="e.g. Urgent deployment for calamity response; full documentation to follow."></textarea>
+                                                                </div>
+                                                            </div>
+                                                            <div class="modal-footer bg-light p-3">
+                                                                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                                <button type="submit" class="btn btn-sm btn-danger px-3 fw-semibold"
+                                                                        onclick="return confirm('AUTHORIZE EMERGENCY OVERRIDE? This bypasses the two-tier approval queue and is fully audited.');">
+                                                                    <i class="fa-solid fa-bolt me-1"></i> Authorize Override
+                                                                </button>
+                                                            </div>
+                                                        </form>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        <?php endif; ?>
 
                                         <!-- Tier 2 Admin Modal -->
                                         <div class="modal fade text-start" id="adminModal<?= $r['id'] ?>" tabindex="-1">

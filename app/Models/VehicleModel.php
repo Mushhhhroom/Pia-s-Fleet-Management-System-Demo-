@@ -15,7 +15,8 @@ class VehicleModel extends Model
         'fuel_type', 'max_payload_kg', 'fuel_capacity_liters', 'odometer_km',
         'current_latitude', 'current_longitude', 'current_speed', 'current_fuel_level',
         'engine_status', 'status', 'current_driver_id', 'last_service_date',
-        'next_service_km', 'created_at', 'updated_at'
+        'next_service_km', 'fleet_category', 'assigned_official',
+        'lto_registration_expiry', 'gsis_insurance_expiry', 'created_at', 'updated_at'
     ];
     protected $useTimestamps = true;
     protected $createdField  = 'created_at';

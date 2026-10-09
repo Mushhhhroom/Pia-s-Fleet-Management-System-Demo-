@@ -117,6 +117,64 @@ class AuditController extends BaseController
         }
 
         fclose($out);
+
+        \App\Services\AuditLogger::log(
+            \App\Services\AuditLogger::REPORT_EXPORT,
+            'COA Trip Audit Report exported to CSV (' . count($trips) . ' rows).',
+            'report'
+        );
+
         exit;
+    }
+
+    /**
+     * NFR-3 — Immutable system audit trail (approvals, emergency overrides,
+     * status changes, login failures — with timestamps and IP addresses).
+     */
+    public function logs()
+    {
+        $eventType = $this->request->getGet('event');
+        $search    = trim((string) $this->request->getGet('q'));
+
+        $auditModel = new \App\Models\AuditLogModel();
+        $builder = $auditModel->orderBy('id', 'DESC');
+
+        if ($eventType) {
+            $builder->where('event_type', $eventType);
+        }
+        if ($search !== '') {
+            $builder->groupStart()
+                ->like('description', $search)
+                ->orLike('user_name', $search)
+                ->orLike('ip_address', $search)
+                ->groupEnd();
+        }
+
+        $data = [
+            'title'     => 'System Audit Trail (NFR-3)',
+            'logs'      => $builder->findAll(300),
+            'event'     => $eventType,
+            'search'    => $search,
+            'eventTypes'=> [
+                'login_success'      => 'Login Success',
+                'login_failure'      => 'Login Failure',
+                'logout'             => 'Logout',
+                'vrs_submitted'      => 'VRS Submitted',
+                'vrs_approved'       => 'VRS Approved',
+                'vrs_rejected'       => 'VRS Rejected',
+                'vrs_escalated'      => 'VRS Escalated (4h SLA)',
+                'emergency_override' => 'Emergency Override',
+                'vrs_dispatched'     => 'Dispatched',
+                'status_change'      => 'Status Change',
+                'safety_check_failed'=> 'Safety Check Failed',
+                'pir_created'        => 'PIR Created',
+                'pir_released'       => 'PIR Released',
+                'rfid_reload'        => 'RFID Transaction',
+                'mfa_setting_changed'=> 'MFA Setting Changed',
+                'report_export'      => 'Report Export',
+            ],
+        ];
+
+        return view('audit/logs', $data);
     }
 }

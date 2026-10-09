@@ -282,6 +282,10 @@ class PiaFleetSeeder extends Seeder
                 'engine_status'       => 'off',
                 'status'              => 'active',
                 'current_driver_id'   => null,
+                'fleet_category'          => 'pool',
+                'assigned_official'       => null,
+                'lto_registration_expiry' => date('Y-m-d', strtotime('+180 days')),
+                'gsis_insurance_expiry'   => date('Y-m-d', strtotime('+45 days')),
                 'last_service_date'   => date('Y-m-d', strtotime('-30 days')),
                 'next_service_km'     => 35000.00,
                 'created_at'          => $now,
@@ -306,6 +310,11 @@ class PiaFleetSeeder extends Seeder
                 'engine_status'       => 'off',
                 'status'              => 'active',
                 'current_driver_id'   => null,
+                // FR-2.1 dedicated executive vehicle (senior official pool)
+                'fleet_category'          => 'dedicated',
+                'assigned_official'       => 'Regional Director Maria L. Santos',
+                'lto_registration_expiry' => date('Y-m-d', strtotime('+12 days')),  // inside FR-7.1 30-day window
+                'gsis_insurance_expiry'   => date('Y-m-d', strtotime('+240 days')),
                 'last_service_date'   => date('Y-m-d', strtotime('-45 days')),
                 'next_service_km'     => 20000.00,
                 'created_at'          => $now,
@@ -330,6 +339,10 @@ class PiaFleetSeeder extends Seeder
                 'engine_status'       => 'off',
                 'status'              => 'active',
                 'current_driver_id'   => null,
+                'fleet_category'          => 'pool',
+                'assigned_official'       => null,
+                'lto_registration_expiry' => date('Y-m-d', strtotime('+95 days')),
+                'gsis_insurance_expiry'   => date('Y-m-d', strtotime('+19 days')),  // inside FR-7.1 30-day window
                 'last_service_date'   => date('Y-m-d', strtotime('-15 days')),
                 'next_service_km'     => 50000.00,
                 'created_at'          => $now,
@@ -354,6 +367,10 @@ class PiaFleetSeeder extends Seeder
                 'engine_status'       => 'off',
                 'status'              => 'active',
                 'current_driver_id'   => null,
+                'fleet_category'          => 'pool',
+                'assigned_official'       => null,
+                'lto_registration_expiry' => date('Y-m-d', strtotime('+300 days')),
+                'gsis_insurance_expiry'   => date('Y-m-d', strtotime('+300 days')),
                 'last_service_date'   => date('Y-m-d', strtotime('-25 days')),
                 'next_service_km'     => 30000.00,
                 'created_at'          => $now,
@@ -365,6 +382,15 @@ class PiaFleetSeeder extends Seeder
             $existing = $this->db->table('vehicles')->where('plate_number', $v['plate_number'])->get()->getRow();
             if (!$existing) {
                 $this->db->table('vehicles')->insert($v);
+            } else {
+                // BRD FR-2.1 / FR-7.1 columns are added by a later migration —
+                // keep already-seeded rows in sync on re-seed.
+                $this->db->table('vehicles')->where('plate_number', $v['plate_number'])->update([
+                    'fleet_category'          => $v['fleet_category'],
+                    'assigned_official'       => $v['assigned_official'],
+                    'lto_registration_expiry' => $v['lto_registration_expiry'],
+                    'gsis_insurance_expiry'   => $v['gsis_insurance_expiry'],
+                ]);
             }
         }
 

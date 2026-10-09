@@ -40,7 +40,7 @@ class DispatchEngineService
         $vehicles = $this->db->table('vehicles')
             ->select('vehicles.*, pms_records.is_locked, pms_records.next_pms_odometer, pms_records.status AS pms_status')
             ->join('pms_records', 'pms_records.vehicle_id = vehicles.id', 'left')
-            ->whereNotIn('vehicles.status', ['maintenance', 'out_of_service'])
+            ->whereNotIn('vehicles.status', ['maintenance', 'under_maintenance', 'disabled_breakdown', 'out_of_service'])
             ->get()->getResultArray();
 
         // Fetch drivers

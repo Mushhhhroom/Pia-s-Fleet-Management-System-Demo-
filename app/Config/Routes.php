@@ -9,6 +9,10 @@ $routes->get('login', 'AuthController::login');
 $routes->post('login', 'AuthController::authenticate');
 $routes->get('logout', 'AuthController::logout');
 
+// NFR-2: TOTP MFA challenge (pre-session, so outside the auth filter)
+$routes->get('login/mfa', 'AuthController::mfaChallenge');
+$routes->post('login/mfa', 'AuthController::mfaVerify');
+
 // Public RESTful APIs for IoT Telematics, Mapping System & Fleet Integration
 $routes->group('api/v1', static function ($routes) {
     // CORS Preflight
@@ -112,9 +116,12 @@ $routes->group('', ['filter' => 'auth'], static function ($routes) {
 
     // 2. Multi-Tier Approval Portal & SLA Watcher (OIC & Admin Division Head)
     $routes->group('', ['filter' => 'role:admin,approver_oic,approver_admin'], static function ($routes) {
-        $routes->get('approvals', 'ApprovalController::index');
         $routes->post('approvals/(:num)/action', 'ApprovalController::action/$1');
     });
+
+    // FR-1.3: the queue is also readable by dispatchers (emergency-override authority)
+    $routes->get('approvals', 'ApprovalController::index',
+        ['filter' => 'role:admin,approver_oic,approver_admin,dispatcher']);
 
     // 3. Motorpool Dispatch Command & Heuristic Allocation Engine
     $routes->group('', ['filter' => 'role:admin,dispatcher'], static function ($routes) {
@@ -129,6 +136,8 @@ $routes->group('', ['filter' => 'auth'], static function ($routes) {
         $routes->get('tickets/(:num)', 'TripTicketController::show/$1');
         $routes->get('tickets/(:num)/print', 'TripTicketController::printDtt/$1');
         $routes->post('tickets/(:num)/update', 'TripTicketController::updateSectionB/$1');
+        // FR-4.2 — 15-minute passenger delay log
+        $routes->post('tickets/(:num)/delay', 'TripTicketController::logDelay/$1');
     });
 
     // 5. Compound Gate Security Checkpoint & QR Scanner
@@ -142,7 +151,59 @@ $routes->group('', ['filter' => 'auth'], static function ($routes) {
     $routes->group('', ['filter' => 'role:admin,auditor'], static function ($routes) {
         $routes->get('audit', 'AuditController::index');
         $routes->get('audit/export', 'AuditController::exportCsv');
+        // FR-7.1/7.2/7.3/7.4 — Compliance portal, COA Form B, fuel analytics,
+        // Certificate of Non-Usage generation
+        $routes->get('compliance', 'ComplianceController::index');
+        $routes->post('compliance/expiry-alerts', 'ComplianceController::sendExpiryAlertsAction');
+        $routes->get('compliance/form-b', 'ComplianceController::formB');
+        $routes->post('compliance/non-usage', 'ComplianceController::generateCertificates');
+        $routes->get('compliance/non-usage/(:num)', 'ComplianceController::certificate/$1');
     });
+
+    // FR-1.3 — Emergency Fast-Track Override (Admin Division Chief / Motorpool Head)
+    $routes->post('approvals/(:num)/emergency', 'ApprovalController::emergencyOverride/$1',
+        ['filter' => 'role:admin,approver_admin,dispatcher']);
+
+    // FR-2.2 — Interactive Dispatch Allocation Calendar (shared anti-double-booking view)
+    $routes->get('dispatch/calendar', 'DispatchController::calendar', ['filter' => 'role:admin,dispatcher']);
+    $routes->get('dispatch/calendar/feed', 'DispatchController::calendarFeed', ['filter' => 'role:admin,dispatcher']);
+
+    // FR-5.1 / FR-5.2 — Mandatory BLOWBAGETS pre-trip safety checklist
+    $routes->group('', ['filter' => 'role:admin,dispatcher,driver,auditor'], static function ($routes) {
+        $routes->get('safety', 'SafetyChecklistController::index');
+        $routes->get('safety/(:num)', 'SafetyChecklistController::create/$1');
+        $routes->post('safety/(:num)', 'SafetyChecklistController::store/$1');
+    });
+
+    // FR-5.3 — Mechanic Pre-Repair Inspection (PIR) queue & workflow
+    $routes->group('', ['filter' => 'role:admin,maintenance,dispatcher'], static function ($routes) {
+        $routes->get('pir', 'PirController::index');
+        $routes->get('pir/(:num)', 'PirController::show/$1');
+        $routes->post('pir/(:num)', 'PirController::update/$1');
+    });
+
+    // FR-6.1 / FR-6.2 / FR-6.3 — Tollway RFID balances, reloads & low-balance alerts
+    $routes->group('', ['filter' => 'role:admin,dispatcher,auditor'], static function ($routes) {
+        $routes->get('rfid', 'RfidController::index');
+        $routes->post('rfid/cards', 'RfidController::storeCard');
+        $routes->post('rfid/reload', 'RfidController::reload');
+    });
+
+    // NFR-2 — Optional TOTP MFA enrollment for any authenticated user
+    $routes->get('mfa/setup', 'AuthController::mfaSetup');
+    $routes->post('mfa/enable', 'AuthController::mfaEnable');
+    $routes->post('mfa/disable', 'AuthController::mfaDisable');
+
+    // In-app notification center (every BRD flow mirrors here)
+    $routes->group('', ['filter' => 'auth'], static function ($routes) {
+        $routes->get('notifications', 'NotificationController::index');
+        $routes->get('notifications/unread', 'NotificationController::unreadCount');
+        $routes->post('notifications/read-all', 'NotificationController::markAllRead');
+        $routes->post('notifications/(:num)/read', 'NotificationController::markRead/$1');
+    });
+
+    // NFR-3 — Immutable system audit trail viewer (Admin/Auditor)
+    $routes->get('audit/logs', 'AuditController::logs', ['filter' => 'role:admin,auditor']);
 
     // Uploaded Receipts & Documents
     $routes->get('uploads/receipts/(:segment)', 'FuelController::viewReceipt/$1');

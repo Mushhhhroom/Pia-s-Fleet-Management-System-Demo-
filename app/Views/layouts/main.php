@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -499,6 +499,15 @@
         $userName = session()->get('user_name') ?? 'System User';
         $userEmail = session()->get('user_email') ?? 'user@fleet.com';
 
+        // In-app notification badge (BRD flows always write a notification)
+        $notifUnread = 0;
+        try {
+            $notifUnread = (int) (new \App\Models\NotificationModel())
+                ->getUnreadCount((int) session()->get('user_id'));
+        } catch (\Throwable $e) {
+            $notifUnread = 0;
+        }
+
         // Role aesthetic configurations for all 7 Government RBAC roles
         $roleBadges = [
             'admin'          => ['label' => 'Super Admin / Director', 'color' => '#3b82f6', 'bg' => 'rgba(59, 130, 246, 0.15)'],
@@ -548,15 +557,18 @@
                 </a>
             <?php endif; ?>
 
-            <?php if (in_array($userRole, ['admin', 'approver_oic', 'approver_admin'])): ?>
+            <?php if (in_array($userRole, ['admin', 'approver_oic', 'approver_admin', 'dispatcher'])): ?>
                 <a href="<?= base_url('approvals') ?>" class="sidebar-link <?= strpos(uri_string(), 'approvals') === 0 ? 'active' : '' ?>">
-                    <i class="fa-solid fa-stamp"></i> Approvals & 24h SLA
+                    <i class="fa-solid fa-stamp"></i> Approvals & 4h Escalation
                 </a>
             <?php endif; ?>
 
             <?php if (in_array($userRole, ['admin', 'dispatcher'])): ?>
-                <a href="<?= base_url('dispatch') ?>" class="sidebar-link <?= strpos(uri_string(), 'dispatch') === 0 ? 'active' : '' ?>">
+                <a href="<?= base_url('dispatch') ?>" class="sidebar-link <?= strpos(uri_string(), 'dispatch') === 0 && strpos(uri_string(), 'calendar') === false ? 'active' : '' ?>">
                     <i class="fa-solid fa-truck-fast"></i> Dispatch Console
+                </a>
+                <a href="<?= base_url('dispatch/calendar') ?>" class="sidebar-link <?= strpos(uri_string(), 'dispatch/calendar') === 0 ? 'active' : '' ?>">
+                    <i class="fa-solid fa-calendar-days"></i> Allocation Calendar
                 </a>
             <?php endif; ?>
 
@@ -572,9 +584,36 @@
                 </a>
             <?php endif; ?>
 
+            <!-- Module 5 — Pre-Trip Safety (BLOWBAGETS) & Mechanic PIR -->
+            <?php if (in_array($userRole, ['admin', 'dispatcher', 'driver', 'auditor'])): ?>
+                <a href="<?= base_url('safety') ?>" class="sidebar-link <?= strpos(uri_string(), 'safety') === 0 ? 'active' : '' ?>">
+                    <i class="fa-solid fa-clipboard-check"></i> BLOWBAGETS Safety Checks
+                </a>
+            <?php endif; ?>
+
+            <?php if (in_array($userRole, ['admin', 'dispatcher', 'maintenance'])): ?>
+                <a href="<?= base_url('pir') ?>" class="sidebar-link <?= strpos(uri_string(), 'pir') === 0 ? 'active' : '' ?>">
+                    <i class="fa-solid fa-screwdriver-wrench"></i> Mechanic PIR Queue
+                </a>
+            <?php endif; ?>
+
+            <!-- Module 6 — Tollway RFID -->
+            <?php if (in_array($userRole, ['admin', 'dispatcher', 'auditor'])): ?>
+                <a href="<?= base_url('rfid') ?>" class="sidebar-link <?= strpos(uri_string(), 'rfid') === 0 ? 'active' : '' ?>">
+                    <i class="fa-solid fa-credit-card"></i> Tollway RFID Cards
+                </a>
+            <?php endif; ?>
+
             <?php if (in_array($userRole, ['admin', 'auditor'])): ?>
-                <a href="<?= base_url('audit') ?>" class="sidebar-link <?= strpos(uri_string(), 'audit') === 0 ? 'active' : '' ?>">
+                <a href="<?= base_url('audit') ?>" class="sidebar-link <?= uri_string() === 'audit' ? 'active' : '' ?>">
                     <i class="fa-solid fa-scale-balanced"></i> COA Compliance & Audits
+                </a>
+                <!-- Module 7 — COA & Government Compliance Portal -->
+                <a href="<?= base_url('compliance') ?>" class="sidebar-link <?= strpos(uri_string(), 'compliance') === 0 ? 'active' : '' ?>">
+                    <i class="fa-solid fa-file-shield"></i> Compliance Portal (Form B)
+                </a>
+                <a href="<?= base_url('audit/logs') ?>" class="sidebar-link <?= strpos(uri_string(), 'audit/logs') === 0 ? 'active' : '' ?>">
+                    <i class="fa-solid fa-clock-rotate-left"></i> System Audit Trail
                 </a>
             <?php endif; ?>
 
@@ -638,6 +677,17 @@
 
             <!-- Profile & Actions Dropdown -->
             <div class="d-flex align-items-center gap-2">
+                <!-- In-App Notification Bell -->
+                <a href="<?= base_url('notifications') ?>" class="btn btn-corp-secondary position-relative d-flex align-items-center gap-2 py-1 px-3 shadow-sm" title="My Notifications">
+                    <i class="fa-solid fa-bell text-primary"></i>
+                    <span class="small fw-semibold d-none d-sm-inline">Alerts</span>
+                    <?php if ($notifUnread > 0): ?>
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.58rem;">
+                            <?= $notifUnread > 99 ? '99+' : $notifUnread ?>
+                        </span>
+                    <?php endif; ?>
+                </a>
+
                 <!-- System Guide & User Manual Trigger -->
                 <button type="button" class="btn btn-corp-secondary d-flex align-items-center gap-2 py-1 px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#systemGuideModal" title="Open Complete System Operations & Security Guide">
                     <i class="fa-solid fa-book-open text-primary"></i>
@@ -668,6 +718,12 @@
                                 <i class="fa-solid fa-circle-question me-2 text-primary"></i> System Guide & Cheatsheet
                             </a>
                         </li>
+                        <li>
+                            <a class="dropdown-item small py-2" href="<?= base_url('mfa/setup') ?>">
+                                <i class="fa-solid fa-shield-halved me-2 text-success"></i> Two-Factor Authentication (MFA)
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
                         <li>
                             <a class="dropdown-item text-danger small py-2" href="<?= base_url('logout') ?>">
                                 <i class="fa-solid fa-arrow-right-from-bracket me-2"></i> Sign Out

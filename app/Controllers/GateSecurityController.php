@@ -122,6 +122,22 @@ class GateSecurityController extends BaseController
 
         // Strict Odometer Validation
         if ($eventType === 'egress') {
+            // ------------------------------------------------------------------
+            // FR-5.1 (Mandatory BLOWBAGETS Checklist): trip activation is
+            // blocked at the gate until the driver's checklist has PASSED.
+            // ------------------------------------------------------------------
+            $safetyModel = new \App\Models\SafetyCheckModel();
+            if (!$safetyModel->hasPassedCheck($ticketId)) {
+                $latest = $safetyModel->latestForTicket($ticketId);
+                $detail = $latest
+                    ? ' The most recent checklist result was "' . strtoupper($latest['result']) . '".'
+                    : ' No BLOWBAGETS checklist has been submitted for this trip.';
+                return $this->response->setJSON([
+                    'status'  => 'error',
+                    'message' => "SAFETY HOLD (FR-5.1): Trip ticket {$ticket['ticket_serial_no']} has no PASSED BLOWBAGETS pre-trip safety check. Egress denied until the driver completes and passes the checklist.{$detail}",
+                ]);
+            }
+
             if ($odometer < $currentVehicleOdo) {
                 return $this->response->setJSON([
                     'status'  => 'error',

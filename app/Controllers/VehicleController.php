@@ -76,9 +76,21 @@ class VehicleController extends BaseController
             'status'               => $this->request->getPost('status') ?: 'active',
             'current_driver_id'    => $driverId,
             'next_service_km'      => (float)$this->request->getPost('next_service_km'),
+            // FR-2.1 fleet segregation + FR-7.1 regulatory expiries
+            'fleet_category'         => $this->request->getPost('fleet_category') === 'dedicated' ? 'dedicated' : 'pool',
+            'assigned_official'      => trim((string)$this->request->getPost('assigned_official')) ?: null,
+            'lto_registration_expiry'=> $this->request->getPost('lto_registration_expiry') ?: null,
+            'gsis_insurance_expiry'  => $this->request->getPost('gsis_insurance_expiry') ?: null,
         ];
 
         $vehicleModel->insert($data);
+
+        \App\Services\AuditLogger::log(
+            \App\Services\AuditLogger::STATUS_CHANGE,
+            "Vehicle {$data['vehicle_code']} ({$data['plate_number']}) registered — category: {$data['fleet_category']}.",
+            'vehicle',
+            (int) ($vehicleModel->getInsertID() ?: 0)
+        );
 
         return redirect()->to('/vehicles')->with('success', 'Vehicle ' . $data['vehicle_code'] . ' successfully registered.');
     }
@@ -177,9 +189,25 @@ class VehicleController extends BaseController
             'status'               => $this->request->getPost('status'),
             'current_driver_id'    => $driverId,
             'next_service_km'      => (float)$this->request->getPost('next_service_km'),
+            // FR-2.1 fleet segregation + FR-7.1 regulatory expiries
+            'fleet_category'         => $this->request->getPost('fleet_category') === 'dedicated' ? 'dedicated' : 'pool',
+            'assigned_official'      => trim((string)$this->request->getPost('assigned_official')) ?: null,
+            'lto_registration_expiry'=> $this->request->getPost('lto_registration_expiry') ?: null,
+            'gsis_insurance_expiry'  => $this->request->getPost('gsis_insurance_expiry') ?: null,
         ];
 
+        $previousStatus = $vehicle['status'];
         $vehicleModel->update($id, $data);
+
+        if ($previousStatus !== $data['status']) {
+            \App\Services\AuditLogger::log(
+                \App\Services\AuditLogger::STATUS_CHANGE,
+                "Vehicle {$vehicle['plate_number']} status changed: {$previousStatus} → {$data['status']}.",
+                'vehicle',
+                (int) $id,
+                ['from' => $previousStatus, 'to' => $data['status']]
+            );
+        }
 
         return redirect()->to('/vehicles/' . $id)->with('success', 'Vehicle details updated successfully.');
     }

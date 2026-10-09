@@ -1,4 +1,4 @@
-﻿<?= $this->extend('layouts/main') ?>
+<?= $this->extend('layouts/main') ?>
 
 <?= $this->section('content') ?>
 <!-- Breadcrumbs & Actions Header -->
@@ -216,11 +216,11 @@
 
     <!-- Right Column: Approvals, SLA, & Dispatch Status -->
     <div class="col-lg-4">
-        <!-- 24h SLA Status Card -->
+        <!-- 4h Escalation / 24h Expiry SLA Status Card -->
         <div class="card-panel border shadow-sm mb-4">
             <div class="p-3 border-bottom bg-light">
                 <span class="small fw-bold text-dark text-uppercase">
-                    <i class="fa-solid fa-stopwatch me-1 text-primary"></i> 24-Hour Approval SLA (BR-02)
+                    <i class="fa-solid fa-stopwatch me-1 text-primary"></i> Approval SLA — 4h Escalation / 24h Expiry (FR-1.4)
                 </span>
             </div>
             <div class="p-3 text-center">
@@ -231,8 +231,10 @@
                         </span>
                     </div>
                     <div class="small text-muted" style="font-size: 0.76rem;">
-                        Approval SLA Deadline: <br>
-                        <strong class="mono text-dark"><?= date('M d, Y h:i A', strtotime($request['sla_deadline'])) ?></strong>
+                        <?= $request['status'] === 'pending_oic'
+                            ? 'Escalates to Tier 2 automatically after 4 hours.'
+                            : 'Final authorization deadline (auto-expiry after 24 hours).' ?><br>
+                        Deadline: <strong class="mono text-dark"><?= date('M d, Y h:i A', strtotime($request['sla_deadline'])) ?></strong>
                     </div>
                 <?php elseif ($request['status'] === 'expired'): ?>
                     <div class="badge bg-dark fs-6 py-2 px-3 mb-2">
@@ -246,11 +248,50 @@
                         <i class="fa-solid fa-circle-check me-1"></i> SLA Compliant
                     </div>
                     <div class="small text-muted" style="font-size: 0.76rem;">
-                        Approved within official 24-hour turnaround benchmark.
+                        Approved within the official turnaround benchmark.
                     </div>
                 <?php endif; ?>
             </div>
         </div>
+
+        <?php if (!empty($request['is_emergency_override'])): ?>
+            <!-- FR-1.3 Emergency Override / Post-Trip Documentation -->
+            <div class="card-panel border shadow-sm mb-4" style="border-left: 4px solid #dc2626 !important;">
+                <div class="p-3 border-bottom bg-light">
+                    <span class="small fw-bold text-danger text-uppercase">
+                        <i class="fa-solid fa-bolt me-1"></i> FR-1.3 Emergency Override
+                    </span>
+                </div>
+                <div class="p-3">
+                    <div class="small text-muted mb-2">
+                        Authorized by the Administrative Division Chief / Motorpool Head.
+                        <?= $request['emergency_override_remarks']
+                            ? '<div class="text-dark fst-italic p-2 rounded bg-light border mt-1">' . esc($request['emergency_override_remarks']) . '</div>'
+                            : '' ?>
+                        <div class="mono mt-1" style="font-size: 0.7rem;">
+                            <?= !empty($request['escalated_at']) ? 'Escalated: ' . esc($request['escalated_at']) : '' ?>
+                        </div>
+                    </div>
+
+                    <div class="kpi-label mb-1">Post-Trip Documentation (FR-1.3)</div>
+                    <?php
+                        $docStatus = $request['post_trip_doc_status'] ?? 'pending';
+                        $docBadge  = match ($docStatus) {
+                            'submitted' => 'bg-success',
+                            'overdue'   => 'bg-danger',
+                            default     => 'bg-warning text-dark',
+                        };
+                    ?>
+                    <span class="badge <?= $docBadge ?>"><?= esc(str_replace('_', ' ', ucfirst($docStatus))) ?></span>
+                    <?php if (!empty($request['post_trip_doc_due']) && $docStatus !== 'submitted'): ?>
+                        <div class="small text-danger mt-1" style="font-size: 0.72rem;">
+                            Due: <span class="mono"><?= esc(date('M d, Y h:i A', strtotime($request['post_trip_doc_due']))) ?></span>
+                            (24 hours after trip completion)
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+        <?php endif; ?>
 
         <!-- 2-Tier Approval Signatures Card -->
         <div class="card-panel border shadow-sm mb-4">

@@ -1,4 +1,4 @@
-﻿<?= $this->extend('layouts/main') ?>
+<?= $this->extend('layouts/main') ?>
 
 <?= $this->section('content') ?>
 <!-- Page Header -->
@@ -8,7 +8,7 @@
             <i class="fa-solid fa-file-signature me-1"></i> Form No. ADMIN-F-018 rev2 &bull; PIA Motorpool
         </div>
         <h1 class="page-title mb-1">Vehicle Request Slips (VRS)</h1>
-        <p class="text-muted small mb-0">Official travel authorization requests, multi-tier approvals, and 24-hour SLA tracking.</p>
+        <p class="text-muted small mb-0">Official travel authorization requests, multi-tier approvals, 4-hour escalation and 24-hour expiry SLA tracking.</p>
     </div>
     <div class="d-flex gap-2">
         <a href="<?= base_url('requests/new') ?>" class="btn-corp btn-corp-primary text-decoration-none shadow-sm">
@@ -24,9 +24,9 @@
             <i class="fa-solid fa-clock-rotate-left fa-lg"></i>
         </div>
         <div>
-            <div class="fw-semibold text-dark small">Standard 24-Hour Approval SLA Active (BR-01 & BR-02)</div>
+            <div class="fw-semibold text-dark small">4-Hour Escalation SLA + 24-Hour Expiry Active (FR-1.4 / BR-02)</div>
             <div class="text-muted small" style="font-size: 0.78rem;">
-                Requests must be submitted $\ge$ 24h prior to departure. Approvers have a strict 24-hour window to review requests before auto-expiration.
+                Requests must be submitted $\ge$ 24h prior to departure (BR-01). Un-actioned Tier&nbsp;1 requests escalate automatically to Tier&nbsp;2 after <strong>4 hours</strong>, and expire after 24 hours. Emergency overrides (FR-1.3) require post-trip documentation.
             </div>
         </div>
     </div>
@@ -70,7 +70,7 @@
                     <th>Destination & Purpose</th>
                     <th>Schedule Window</th>
                     <th>Passengers</th>
-                    <th>24h SLA Countdown</th>
+                    <th>SLA Countdown (4h)</th>
                     <th>Status</th>
                     <th class="text-end">Actions</th>
                 </tr>

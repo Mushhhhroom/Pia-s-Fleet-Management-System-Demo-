@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 namespace App\Controllers;
 
@@ -141,6 +141,11 @@ class TripTicketController extends BaseController
         $lubeOil  = (float)$this->request->getPost('lube_oil_liters');
         $grease   = (float)$this->request->getPost('grease_units');
 
+        // FR-4.1 / FR-6.2: toll expense capture on the trip ticket
+        $tollExpense = max(0, (float)$this->request->getPost('toll_expense'));
+        $tollProvider = $this->request->getPost('toll_provider');
+        $tollProvider = in_array($tollProvider, ['autosweep', 'easytrip', 'cash'], true) ? $tollProvider : null;
+
         // Digital Certifications
         $driverCert = (int)$this->request->getPost('driver_certified');
         $passCert   = (int)$this->request->getPost('passenger_certified');
@@ -168,6 +173,8 @@ class TripTicketController extends BaseController
             'gear_oil_liters'           => $gearOil,
             'lube_oil_liters'           => $lubeOil,
             'grease_units'              => $grease,
+            'toll_expense'              => $tollExpense,
+            'toll_provider'             => $tollExpense > 0 ? $tollProvider : null,
             'driver_certified'          => $driverCert ? 1 : $ticket['driver_certified'],
             'driver_certified_at'       => $driverCert ? $now : $ticket['driver_certified_at'],
             'passenger_certified'       => $passCert ? 1 : $ticket['passenger_certified'],
@@ -180,9 +187,45 @@ class TripTicketController extends BaseController
         if ($ticket['status'] === 'returned' && $driverCert && $passCert) {
             $updateData['status'] = 'completed';
             $this->requestModel->update($ticket['request_id'], ['status' => 'completed']);
+
+            // FR-1.3: completing the trip satisfies the post-trip
+            // documentation requirement of an emergency override
+            $request = $this->requestModel->find($ticket['request_id']);
+            if ($request && !empty($request['is_emergency_override'])
+                && in_array($request['post_trip_doc_status'], ['pending', 'overdue'], true)) {
+                $this->requestModel->update($ticket['request_id'], ['post_trip_doc_status' => 'submitted']);
+            }
+
+            \App\Services\AuditLogger::log(
+                \App\Services\AuditLogger::STATUS_CHANGE,
+                "Trip ticket {$ticket['ticket_serial_no']} completed (driver + passenger certifications recorded).",
+                'trip_ticket',
+                (int) $id,
+                ['distance_km' => $totalDistKm, 'fuel_kml' => $fuelEfficiency]
+            );
         }
 
         $this->ticketModel->update($id, $updateData);
+
+        // FR-6.2: record the toll deduction against the vehicle's RFID card
+        if ($tollExpense > 0 && in_array($tollProvider, ['autosweep', 'easytrip'], true)) {
+            $rfid = new \App\Controllers\RfidController();
+            $newBalance = $rfid->recordToll(
+                (int) $ticket['vehicle_id'],
+                $tollExpense,
+                $tollProvider,
+                (int) $id,
+                "Toll expense logged on trip ticket {$ticket['ticket_serial_no']}"
+            );
+            if ($newBalance !== null) {
+                \App\Services\AuditLogger::log(
+                    \App\Services\AuditLogger::RFID_RELOAD,
+                    "Toll of ₱" . number_format($tollExpense, 2) . " deducted from {$tollProvider} card; new balance ₱" . number_format($newBalance, 2) . " (FR-6.2).",
+                    'trip_ticket',
+                    (int) $id
+                );
+            }
+        }
 
         $referer = $this->request->getServer('HTTP_REFERER') ?? '';
         if (str_contains($referer, 'driver/trips')) {
@@ -190,5 +233,70 @@ class TripTicketController extends BaseController
         }
 
         return redirect()->to("/tickets/{$id}")->with('success', 'Driver Trip Ticket Section B (Trip Log & Fuel Accounting) updated successfully.');
+    }
+
+    /**
+     * FR-4.2 — 15-Minute Passenger Delay Log.
+     *
+     * Logs passenger pick-up delays; once a delay reaches the 15-minute
+     * standard rule, all dispatchers are automatically notified.
+     */
+    public function logDelay($id)
+    {
+        $ticket = $this->ticketModel->find($id);
+        if (!$ticket) {
+            return redirect()->to('/tickets')->with('error', 'Trip ticket not found.');
+        }
+
+        $minutes = (int) $this->request->getPost('delay_minutes');
+        $reason  = trim((string) $this->request->getPost('reason'));
+
+        if ($minutes <= 0) {
+            return redirect()->back()->with('error', 'Delay duration must be greater than zero minutes.');
+        }
+
+        // FR-4.2: 15-minute standard rule triggers dispatcher notification
+        $notified = $minutes >= 15 ? 1 : 0;
+        $now = date('Y-m-d H:i:s');
+
+        $delayModel = new \App\Models\PassengerDelayModel();
+        $delayModel->insert([
+            'trip_ticket_id'     => (int) $id,
+            'delay_minutes'      => $minutes,
+            'reason'             => $reason ?: null,
+            'dispatcher_notified'=> $notified,
+            'logged_by'          => (int) session()->get('user_id') ?: null,
+            'created_at'         => $now,
+        ]);
+
+        if ($notified) {
+            $notificationModel = new \App\Models\NotificationModel();
+            $userModel = new \App\Models\UserModel();
+            foreach ($userModel->whereIn('role', ['dispatcher', 'admin'])->findAll() as $disp) {
+                $notificationModel->insert([
+                    'user_id'    => $disp['id'],
+                    'title'      => "PASSENGER DELAY (FR-4.2): {$ticket['ticket_serial_no']}",
+                    'message'    => "Passenger pick-up delayed by {$minutes} minutes"
+                        . ($reason ? " — {$reason}" : '')
+                        . ". Exceeds the 15-minute standard rule; adjust the dispatch schedule accordingly.",
+                    'type'       => 'warning',
+                    'link'       => "/tickets/{$id}",
+                    'is_read'    => 0,
+                    'created_at' => $now,
+                ]);
+            }
+
+            \App\Services\AuditLogger::log(
+                \App\Services\AuditLogger::STATUS_CHANGE,
+                "Passenger delay of {$minutes} minutes logged on {$ticket['ticket_serial_no']} (≥15 min → dispatchers notified, FR-4.2).",
+                'trip_ticket',
+                (int) $id,
+                ['minutes' => $minutes, 'reason' => $reason]
+            );
+
+            return redirect()->back()->with('success', "Delay of {$minutes} minutes logged. Dispatchers have been automatically notified (15-minute rule).");
+        }
+
+        return redirect()->back()->with('success', "Delay of {$minutes} minutes logged on the trip ticket.");
     }
 }

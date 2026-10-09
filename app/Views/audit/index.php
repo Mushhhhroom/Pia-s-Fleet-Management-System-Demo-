@@ -8,9 +8,12 @@
             <i class="fa-solid fa-scale-balanced me-1"></i> Commission on Audit (COA) &bull; Executive Oversight
         </div>
         <h1 class="page-title mb-1">COA Compliance & Fleet Governance</h1>
-        <p class="text-muted small mb-0">Statutory audit trails, 24h approval SLA metrics, fuel consumption variances, and PMS adherence.</p>
+        <p class="text-muted small mb-0">Statutory audit trails, approval SLA metrics (4h escalation / 24h expiry), fuel consumption variances, and PMS adherence.</p>
     </div>
-    <div class="d-flex align-items-center gap-2">
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+        <a href="<?= base_url('audit/logs') ?>" class="btn-corp btn-corp-secondary text-decoration-none">
+            <i class="fa-solid fa-clock-rotate-left me-1"></i> System Audit Trail (NFR-3)
+        </a>
         <a href="<?= base_url('audit/export') ?>" class="btn-corp btn-corp-primary text-decoration-none shadow-sm">
             <i class="fa-solid fa-file-csv me-1"></i> Export Official COA Audit CSV
         </a>

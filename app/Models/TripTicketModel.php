@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 namespace App\Models;
 
@@ -18,7 +18,8 @@ class TripTicketModel extends Model
         'start_odometer', 'dest_odometer', 'return_odometer', 'total_distance_km',
         'fuel_balance_start_liters', 'fuel_issued_stock_liters', 'fuel_purchased_liters',
         'fuel_purchased_cost', 'fuel_used_liters', 'fuel_balance_end_liters', 'fuel_efficiency_kml',
-        'fuel_anomaly_flag', 'gear_oil_liters', 'lube_oil_liters', 'grease_units',
+        'fuel_anomaly_flag', 'toll_expense', 'toll_provider',
+        'gear_oil_liters', 'lube_oil_liters', 'grease_units',
         'driver_certified', 'driver_certified_at', 'passenger_certified',
         'passenger_certifier_name', 'passenger_certified_at', 'notes', 'created_at', 'updated_at'
     ];

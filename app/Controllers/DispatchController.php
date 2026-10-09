@@ -10,6 +10,7 @@ use App\Models\PmsRecordModel;
 use App\Models\NotificationModel;
 use App\Services\DispatchEngineService;
 use App\Services\SecurityQrService;
+use App\Services\AuditLogger;
 
 class DispatchController extends BaseController
 {
@@ -103,6 +104,32 @@ class DispatchController extends BaseController
             return redirect()->back()->with('error', 'Selected vehicle or driver does not exist.');
         }
 
+        // FR-5.1/5.2: a locked (Under Maintenance / Disabled) vehicle can never be dispatched
+        if (in_array($vehicle['status'], ['maintenance', 'under_maintenance', 'disabled_breakdown', 'out_of_service'], true)) {
+            return redirect()->back()->with('error', "Safety lock: vehicle {$vehicle['plate_number']} is in '{$vehicle['status']}' status and cannot be dispatched (FR-5.2).");
+        }
+
+        // FR-2.1 (Fleet Segregation): dedicated executive vehicles are reserved
+        // for their designated senior official.
+        if (($vehicle['fleet_category'] ?? 'pool') === 'dedicated'
+            && !empty($vehicle['assigned_official'])) {
+            $official = strtolower(trim($vehicle['assigned_official']));
+            $requestor = strtolower(trim($request['requestor_name'] ?? ''));
+            if ($requestor === '' || (!str_contains($official, $requestor) && !str_contains($requestor, $official))) {
+                return redirect()->back()->with(
+                    'error',
+                    "Fleet segregation rule (FR-2.1): {$vehicle['plate_number']} is a Dedicated Executive vehicle reserved for {$vehicle['assigned_official']}. Select a Shared Pool vehicle instead."
+                );
+            }
+        }
+
+        // FR-2.2 (Interactive Calendar / no double-booking): reject when the
+        // vehicle or driver already holds an overlapping assignment.
+        $conflict = $this->findBookingConflict($requestId, $vehicleId, $driverId, $request);
+        if ($conflict) {
+            return redirect()->back()->with('error', $conflict);
+        }
+
         // Check if vehicle has PMS lock
         $pmsRecord = $this->pmsModel->where('vehicle_id', $vehicleId)->first();
         if ($pmsRecord && (int)$pmsRecord['is_locked'] === 1) {
@@ -181,6 +208,143 @@ class DispatchController extends BaseController
             'created_at' => date('Y-m-d H:i:s'),
         ]);
 
+        // NFR-3: dispatch allocation is a critical status change
+        AuditLogger::log(
+            AuditLogger::VRS_DISPATCHED,
+            "VRS {$request['request_number']} dispatched: vehicle {$vehicle['plate_number']} + driver {$driver['first_name']} {$driver['last_name']} assigned; ticket {$serialNo} issued.",
+            'trip_ticket',
+            (int) $ticketId,
+            ['vehicle' => $vehicle['plate_number'], 'driver' => $driver['driver_code']]
+        );
+
         return redirect()->to("/tickets/{$ticketId}")->with('success', "Dispatched successfully! Driver's Trip Ticket {$serialNo} generated with cryptographic QR security token.");
+    }
+
+    // ------------------------------------------------------------------
+    // FR-2.1 / FR-2.2 — Fleet segregation enforcement & double-booking guard
+    // ------------------------------------------------------------------
+
+    /**
+     * Returns an error message when the vehicle or driver already holds a
+     * non-cancelled booking overlapping the requested travel window.
+     */
+    protected function findBookingConflict(int $requestId, int $vehicleId, int $driverId, array $request): ?string
+    {
+        $dep = $request['departure_time'] ?? null;
+        $ret = $request['return_time'] ?? null;
+        if (!$dep) {
+            return null;
+        }
+
+        $ret = $ret ?: date('Y-m-d H:i:s', strtotime($dep) + 4 * 3600);
+
+        $overlapping = $this->ticketModel
+            ->select('trip_tickets.ticket_serial_no, trip_tickets.status, trip_tickets.vehicle_id,
+                      trip_tickets.driver_id, vehicles.plate_number,
+                      trip_tickets.authorized_departure, trip_tickets.authorized_return,
+                      CONCAT(drivers.first_name, " ", drivers.last_name) AS driver_name')
+            ->join('vehicles', 'vehicles.id = trip_tickets.vehicle_id', 'left')
+            ->join('drivers', 'drivers.id = trip_tickets.driver_id', 'left')
+            ->whereNotIn('trip_tickets.status', ['cancelled', 'completed', 'returned'])
+            ->where('trip_tickets.request_id !=', $requestId)
+            ->where('trip_tickets.authorized_departure <=', $ret)
+            ->where('trip_tickets.authorized_return >=', $dep)
+            ->where('(trip_tickets.vehicle_id = ' . $vehicleId . ' OR trip_tickets.driver_id = ' . $driverId . ')')
+            ->findAll();
+
+        if (empty($overlapping)) {
+            return null;
+        }
+
+        foreach ($overlapping as $c) {
+            if ((int) $c['vehicle_id'] === $vehicleId) {
+                $who = "vehicle {$c['plate_number']}";
+            } else {
+                $who = 'driver ' . ($c['driver_name'] ?: '#' . $c['driver_id']);
+            }
+
+            return "Double-booking blocked (FR-2.2): {$who} already holds {$c['ticket_serial_no']} "
+                . "({$c['authorized_departure']} → {$c['authorized_return']}). "
+                . 'Check the Dispatch Calendar for open slots.';
+        }
+
+        return null;
+    }
+
+    // ------------------------------------------------------------------
+    // FR-2.2 — Interactive Allocation Calendar (shared dispatcher view)
+    // ------------------------------------------------------------------
+
+    /**
+     * Month-view calendar of vehicle + driver allocations.
+     */
+    public function calendar()
+    {
+        $month = $this->request->getGet('month') ?: date('Y-m');
+
+        $data = [
+            'title'      => 'Interactive Dispatch Calendar & Allocation Board',
+            'month'      => $month,
+            'allocations'=> $this->calendarData($month),
+            'vehicles'   => $this->vehicleModel->orderBy('plate_number', 'ASC')->findAll(),
+            'drivers'    => $this->driverModel->findAll(),
+        ];
+
+        return view('dispatch/calendar', $data);
+    }
+
+    /**
+     * JSON feed powering the FR-2.2 calendar (used by the view and APIs).
+     */
+    public function calendarData(?string $month = null): array
+    {
+        $month  = $month ?: ($this->request->getGet('month') ?: date('Y-m'));
+        $start  = $month . '-01 00:00:00';
+        $end    = date('Y-m-t 23:59:59', strtotime($start));
+
+        $tickets = $this->ticketModel
+            ->select('trip_tickets.*, vehicles.plate_number, vehicles.fleet_category,
+                      vehicles.assigned_official,
+                      CONCAT(drivers.first_name, " ", drivers.last_name) AS driver_name,
+                      trip_requests.destination, trip_requests.requestor_name')
+            ->join('vehicles', 'vehicles.id = trip_tickets.vehicle_id', 'left')
+            ->join('drivers', 'drivers.id = trip_tickets.driver_id', 'left')
+            ->join('trip_requests', 'trip_requests.id = trip_tickets.request_id', 'left')
+            ->whereNotIn('trip_tickets.status', ['cancelled'])
+            ->where('trip_tickets.authorized_departure <=', $end)
+            ->where('trip_tickets.authorized_return >=', $start)
+            ->orderBy('trip_tickets.authorized_departure', 'ASC')
+            ->findAll();
+
+        $allocations = [];
+        foreach ($tickets as $t) {
+            $allocations[] = [
+                'date'          => substr((string) $t['authorized_departure'], 0, 10),
+                'ticket'        => $t['ticket_serial_no'],
+                'status'        => $t['status'],
+                'plate'         => $t['plate_number'],
+                'fleet_category'=> $t['fleet_category'] ?? 'pool',
+                'driver'        => $t['driver_name'],
+                'destination'   => $t['destination'],
+                'requestor'     => $t['requestor_name'],
+                'departure'     => $t['authorized_departure'],
+                'return'        => $t['authorized_return'],
+                'url'           => '/tickets/' . $t['id'],
+            ];
+        }
+
+        return $allocations;
+    }
+
+    /**
+     * JSON endpoint for the calendar view.
+     */
+    public function calendarFeed()
+    {
+        return $this->response->setJSON([
+            'status' => 'success',
+            'month'  => $this->request->getGet('month') ?: date('Y-m'),
+            'data'   => $this->calendarData(),
+        ]);
     }
 }

@@ -8,6 +8,7 @@ use App\Models\DriverModel;
 use App\Models\NotificationModel;
 use App\Models\UserModel;
 use App\Services\SlaService;
+use App\Services\AuditLogger;
 
 class RequestController extends BaseController
 {
@@ -124,8 +125,8 @@ class RequestController extends BaseController
         // Generate sequential VRS number
         $vrsNumber = $this->requestModel->generateVrsNumber();
 
-        // Calculate 24-Hour Approval SLA Deadline (BR-02)
-        $slaDeadline = date('Y-m-d H:i:s', strtotime('+24 hours'));
+        // FR-1.4: 4-Hour Approval Escalation Deadline (escalates to Admin Division Chief)
+        $slaDeadline = date('Y-m-d H:i:s', strtotime('+' . SlaService::ESCALATION_HOURS . ' hours'));
 
         // Resolve OIC Approver based on office
         $officeId = (int)$this->request->getPost('office_id');
@@ -166,7 +167,7 @@ class RequestController extends BaseController
             $this->notificationModel->insert([
                 'user_id'    => $oicUser['id'],
                 'title'      => "{$rushTag}New VRS Filed: {$vrsNumber}",
-                'message'    => "{$userName} filed a vehicle request to {$requestData['destination']}. SLA deadline is 24 hours.",
+                'message'    => "{$userName} filed a vehicle request to {$requestData['destination']}. Act within " . SlaService::ESCALATION_HOURS . " hours or it auto-escalates to the Administrative Division Chief (FR-1.4).",
                 'type'       => $isRush ? 'danger' : 'info',
                 'link'       => "/approvals",
                 'is_read'    => 0,
@@ -175,8 +176,18 @@ class RequestController extends BaseController
         }
 
         $msg = $isRush
-            ? "Rush Vehicle Request {$vrsNumber} submitted with emergency justification. Approver SLA countdown started (24h)."
-            : "Vehicle Request Slip {$vrsNumber} submitted successfully. Pending OIC review.";
+            ? "Rush Vehicle Request {$vrsNumber} submitted with emergency justification. Approver escalation countdown started (" . SlaService::ESCALATION_HOURS . "h)."
+            : "Vehicle Request Slip {$vrsNumber} submitted successfully. Pending OIC review (" . SlaService::ESCALATION_HOURS . "-hour action window).";
+
+        // NFR-3: immutable audit trail
+        AuditLogger::log(
+            AuditLogger::VRS_SUBMITTED,
+            "VRS {$vrsNumber} filed by {$userName} for travel to {$requestData['destination']}"
+            . ($isRush ? ' (RUSH — justification attached)' : ''),
+            'trip_request',
+            (int) $requestId,
+            ['rush' => $isRush, 'departure' => $requestData['departure_time']]
+        );
 
         return redirect()->to("/requests/{$requestId}")->with('success', $msg);
     }

@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 namespace App\Controllers;
 
@@ -310,13 +310,14 @@ class DriverController extends BaseController
         $description = trim($this->request->getPost('description'));
 
         $incNo = 'INC-' . date('Ymd-His') . '-' . rand(10, 99);
+        $now = date('Y-m-d H:i:s');
 
-        $incidentModel->insert([
+        $incidentId = $incidentModel->insert([
             'incident_no'     => $incNo,
             'vehicle_id'      => $vehicleId,
             'driver_id'       => $driverId ?: null,
             'trip_id'         => (int)$this->request->getPost('trip_id') ?: null,
-            'incident_date'   => date('Y-m-d H:i:s'),
+            'incident_date'   => $now,
             'severity'        => $severity,
             'type'            => $type,
             'location'        => $location,
@@ -325,8 +326,60 @@ class DriverController extends BaseController
             'status'          => 'reported',
         ]);
 
-        if (in_array($severity, ['severe', 'critical']) && $vehicleId > 0) {
-            $vehicleModel->update($vehicleId, ['status' => 'out_of_service']);
+        // ------------------------------------------------------------------
+        // FR-4.3 (Report Breakdown): the vehicle state updates to
+        // Disabled / Breakdown and a Pre-Repair Inspection Report is
+        // automatically generated and routed to the mechanic queue.
+        // ------------------------------------------------------------------
+        $isBreakdown = stripos($type, 'breakdown') !== false
+            || stripos($type, 'mechanical') !== false
+            || in_array($severity, ['severe', 'critical'], true);
+
+        $pirNumber = null;
+        if ($isBreakdown && $vehicleId > 0) {
+            $vehicleModel->update($vehicleId, ['status' => 'disabled_breakdown']);
+
+            $pirModel = new \App\Models\PirReportModel();
+            $pirNumber = $pirModel->generatePirNumber();
+            $pirModel->insert([
+                'pir_number'         => $pirNumber,
+                'vehicle_id'         => $vehicleId,
+                'incident_id'        => (int) $incidentId,
+                'source'             => 'breakdown',
+                'defect_description' => "Breakdown reported via incident {$incNo} at {$location} (severity: {$severity}). "
+                    . ($description ?: "Driver reported {$type}."),
+                'status'             => 'pending',
+                'reported_by'        => (int) session()->get('user_id') ?: null,
+                'created_at'         => $now,
+            ]);
+
+            // Route to the mechanic queue + notify dispatch (FR-4.3)
+            $userModel = new \App\Models\UserModel();
+            $recipients = array_merge(
+                $userModel->where('role', 'maintenance')->findAll(),
+                $userModel->where('role', 'dispatcher')->findAll(),
+                $userModel->where('role', 'admin')->findAll()
+            );
+            $notificationModel = new \App\Models\NotificationModel();
+            foreach ($recipients as $recip) {
+                $notificationModel->insert([
+                    'user_id'    => $recip['id'],
+                    'title'      => "BREAKDOWN — Vehicle Disabled ({$incNo})",
+                    'message'    => "Vehicle #{$vehicleId} reported {$type} at {$location} (severity {$severity}). State set to Disabled/Breakdown and PIR {$pirNumber} auto-generated for the mechanic queue.",
+                    'type'       => 'danger',
+                    'link'       => '/pir',
+                    'is_read'    => 0,
+                    'created_at' => $now,
+                ]);
+            }
+
+            \App\Services\AuditLogger::log(
+                \App\Services\AuditLogger::STATUS_CHANGE,
+                "Breakdown reported ({$incNo}): vehicle #{$vehicleId} set to Disabled/Breakdown; PIR {$pirNumber} auto-generated (FR-4.3).",
+                'vehicle',
+                $vehicleId,
+                ['incident' => $incNo, 'severity' => $severity]
+            );
         }
 
         // Notify dispatch via SMS (SDD Â§5.9)
@@ -334,16 +387,22 @@ class DriverController extends BaseController
         $smsSender->send(
             '+63 918 555 0200',
             "FleetPulse Dispatch Alert: Incident {$incNo} reported by driver ({$type} - {$severity}). Location: {$location}."
+            . ($pirNumber ? " PIR {$pirNumber} auto-generated; vehicle Disabled." : '')
         );
 
         $referer = $this->request->getServer('HTTP_REFERER') ?? '';
         if (str_contains($referer, 'driver/trips') || !$this->request->isAJAX()) {
-            return redirect()->to('/driver/trips')->with('success', "Incident {$incNo} reported to Dispatch.");
+            return redirect()->to('/driver/trips')->with(
+                'success',
+                "Incident {$incNo} reported to Dispatch."
+                . ($pirNumber ? " Vehicle set to Disabled/Breakdown — PIR {$pirNumber} routed to the mechanic queue." : '')
+            );
         }
 
         return $this->response->setJSON([
             'status'      => 'success',
             'incident_no' => $incNo,
+            'pir_number'  => $pirNumber,
             'message'     => 'Incident reported to Dispatch.',
         ]);
     }

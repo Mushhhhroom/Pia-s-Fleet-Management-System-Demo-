@@ -26,12 +26,21 @@ class RoleFilter implements FilterInterface
         // 2. Drivers and Guards have dedicated specialized operational interfaces
         $uri = $request->getUri()->getPath();
         if ($userRole === 'driver') {
-            if (!str_contains($uri, 'driver') && !str_contains($uri, 'logout') && !str_contains($uri, 'api') && !str_contains($uri, 'tickets')) {
+            // 'safety' = BLOWBAGETS checklist (FR-5.1); 'mfa'/'notif' = account services
+            $allowed = ['driver', 'logout', 'api', 'tickets', 'safety', 'mfa', 'notif'];
+            $permitted = false;
+            foreach ($allowed as $needle) {
+                if (str_contains($uri, $needle)) {
+                    $permitted = true;
+                    break;
+                }
+            }
+            if (!$permitted) {
                 return redirect()->to('/driver/trips')->with('error', 'Access restricted: Drivers are directed to the mobile driver portal.');
             }
         }
         if ($userRole === 'guard') {
-            if (!str_contains($uri, 'gate') && !str_contains($uri, 'logout') && !str_contains($uri, 'api')) {
+            if (!str_contains($uri, 'gate') && !str_contains($uri, 'logout') && !str_contains($uri, 'api') && !str_contains($uri, 'mfa') && !str_contains($uri, 'notif')) {
                 return redirect()->to('/gate')->with('error', 'Access restricted: Security officers are directed to the Gate Security Checkpoint.');
             }
         }

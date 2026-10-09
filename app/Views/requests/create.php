@@ -155,7 +155,7 @@
                 <div class="pt-3 border-top d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
                     <div class="small text-muted d-flex align-items-center gap-2">
                         <i class="fa-solid fa-clock text-primary"></i>
-                        <span>Submission starts the mandatory 24-hour approval SLA clock.</span>
+                        <span>Submission starts the mandatory 4-hour escalation SLA clock (24-hour final expiry).</span>
                     </div>
                     <div class="d-flex gap-2">
                         <a href="<?= base_url('requests') ?>" class="btn-corp btn-corp-secondary text-decoration-none">

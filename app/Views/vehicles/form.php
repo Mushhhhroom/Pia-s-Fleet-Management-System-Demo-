@@ -115,7 +115,14 @@
                         <label class="form-label" style="font-size: 0.8rem; font-weight: 600; color: var(--text-heading);">Operational State</label>
                         <select name="status" class="form-select" style="font-size: 0.85rem; border-color: var(--border-subtle); border-radius: 7px;">
                             <?php
-                            $statuses = ['active' => 'Active / Ready', 'in_transit' => 'In Transit', 'maintenance' => 'In Maintenance', 'out_of_service' => 'Out of Service'];
+                            $statuses = [
+                                'active'             => 'Active / Ready',
+                                'in_transit'         => 'In Transit',
+                                'maintenance'        => 'In Maintenance',
+                                'under_maintenance'  => 'Under Maintenance (Safety Lock)',
+                                'disabled_breakdown' => 'Disabled / Breakdown',
+                                'out_of_service'     => 'Out of Service',
+                            ];
                             $curStat = old('status', $vehicle['status'] ?? 'active');
                             foreach ($statuses as $key => $label): ?>
                                 <option value="<?= $key ?>" <?= $curStat === $key ? 'selected' : '' ?>><?= $label ?></option>
@@ -134,6 +141,42 @@
                                 </option>
                             <?php endforeach; ?>
                         </select>
+                    </div>
+                </div>
+            </div>
+
+            <hr style="border-color: var(--border-subtle); margin: 24px 0;">
+
+            <!-- Section 4: FR-2.1 Fleet Segregation & FR-7.1 Regulatory Compliance -->
+            <div class="mb-4">
+                <div class="mono" style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); margin-bottom: 12px; font-weight: 600;">
+                    04 &bull; Fleet Segregation &amp; Regulatory Expiries (FR-2.1 / FR-7.1)
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label" style="font-size: 0.8rem; font-weight: 600; color: var(--text-heading);">Fleet Category</label>
+                        <select name="fleet_category" class="form-select" style="font-size: 0.85rem; border-color: var(--border-subtle); border-radius: 7px;">
+                            <?php
+                            $categories = ['pool' => 'Shared Pool Vehicle', 'dedicated' => 'Dedicated Executive Vehicle'];
+                            $curCat = old('fleet_category', $vehicle['fleet_category'] ?? 'pool');
+                            foreach ($categories as $key => $label): ?>
+                                <option value="<?= $key ?>" <?= $curCat === $key ? 'selected' : '' ?>><?= $label ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                        <div class="form-text" style="font-size: 0.7rem;">Dedicated units are reserved for a designated senior official (FR-2.1).</div>
+                    </div>
+                    <div class="col-md-5">
+                        <label class="form-label" style="font-size: 0.8rem; font-weight: 600; color: var(--text-heading);">Assigned Senior Official (for Dedicated units)</label>
+                        <input type="text" name="assigned_official" class="form-control" value="<?= old('assigned_official', $vehicle['assigned_official'] ?? '') ?>" placeholder="e.g. Regional Director Maria L. Santos" style="font-size: 0.85rem; border-color: var(--border-subtle); border-radius: 7px;">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label" style="font-size: 0.8rem; font-weight: 600; color: var(--text-heading);">LTO Registration Expiry</label>
+                        <input type="date" name="lto_registration_expiry" class="form-control mono" value="<?= old('lto_registration_expiry', $vehicle['lto_registration_expiry'] ?? '') ?>" style="font-size: 0.85rem; border-color: var(--border-subtle); border-radius: 7px;">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label" style="font-size: 0.8rem; font-weight: 600; color: var(--text-heading);">GSIS Insurance Expiry</label>
+                        <input type="date" name="gsis_insurance_expiry" class="form-control mono" value="<?= old('gsis_insurance_expiry', $vehicle['gsis_insurance_expiry'] ?? '') ?>" style="font-size: 0.85rem; border-color: var(--border-subtle); border-radius: 7px;">
+                        <div class="form-text" style="font-size: 0.7rem;">30-day automated alerts (FR-7.1).</div>
                     </div>
                 </div>
             </div>
